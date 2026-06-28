@@ -1,0 +1,71 @@
+{
+  "name": "ForSaleItem",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Item title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Item description"
+    },
+    "price": {
+      "type": "number",
+      "description": "Price in USD"
+    },
+    "category": {
+      "type": "string",
+      "description": "Item category"
+    },
+    "photo_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Photos of the item"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "available",
+        "sold",
+        "pending"
+      ],
+      "default": "available",
+      "description": "Item availability"
+    },
+    "condition": {
+      "type": "string",
+      "enum": [
+        "Excellent",
+        "Very Good",
+        "Good",
+        "Fair"
+      ],
+      "description": "Item condition"
+    }
+  },
+  "required": [
+    "title",
+    "price"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

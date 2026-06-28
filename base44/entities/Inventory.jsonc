@@ -1,0 +1,88 @@
+{
+  "name": "Inventory",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Item title"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Records & Music",
+        "Toys & Collectibles",
+        "Military & Weapons",
+        "Jewelry",
+        "Signs & Advertising",
+        "Sports & Cards",
+        "Home & D\u00e9cor",
+        "Furniture",
+        "Art",
+        "Other"
+      ],
+      "description": "Item category"
+    },
+    "price": {
+      "type": "number",
+      "description": "Price in USD"
+    },
+    "description": {
+      "type": "string",
+      "description": "Item description"
+    },
+    "photo_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Photos of the item"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "available",
+        "pending",
+        "sold"
+      ],
+      "default": "available",
+      "description": "Item availability"
+    },
+    "condition": {
+      "type": "string",
+      "enum": [
+        "Excellent",
+        "Very Good",
+        "Good",
+        "Fair"
+      ],
+      "description": "Item condition"
+    },
+    "featured": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to feature this item"
+    }
+  },
+  "required": [
+    "title",
+    "price"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

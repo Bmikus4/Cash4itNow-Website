@@ -1,0 +1,94 @@
+{
+  "name": "UpcomingSale",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "time": {
+      "type": "string",
+      "description": "Sale start time (e.g. 9:00 AM)"
+    },
+    "description": {
+      "type": "string"
+    },
+    "image_url": {
+      "type": "string"
+    },
+    "link": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string",
+      "description": "Full street address of the sale"
+    },
+    "rooms": {
+      "type": "array",
+      "description": "Room sections with photos",
+      "items": {
+        "type": "object",
+        "properties": {
+          "room_name": {
+            "type": "string"
+          },
+          "photo_urls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "owner_name": {
+      "type": "string",
+      "description": "Name of the sale owner / client"
+    },
+    "owner_phone": {
+      "type": "string",
+      "description": "Owner contact phone"
+    },
+    "owner_email": {
+      "type": "string",
+      "description": "Owner contact email"
+    },
+    "owner_address": {
+      "type": "string",
+      "description": "Owner home/mailing address"
+    },
+    "owner_notes": {
+      "type": "string",
+      "description": "Internal notes about the owner"
+    }
+  },
+  "required": [
+    "title",
+    "date"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

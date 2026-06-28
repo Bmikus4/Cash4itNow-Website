@@ -1,0 +1,70 @@
+{
+  "name": "Offer",
+  "type": "object",
+  "properties": {
+    "item_title": {
+      "type": "string",
+      "description": "Title of the item being offered on"
+    },
+    "item_id": {
+      "type": "string",
+      "description": "ID of the ForSaleItem"
+    },
+    "listed_price": {
+      "type": "number",
+      "description": "Original listed price in USD"
+    },
+    "offer_amount": {
+      "type": "number",
+      "description": "Customer's offer amount in USD"
+    },
+    "offer_percent": {
+      "type": "number",
+      "description": "Offer as a percentage of listed price"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "customer_email": {
+      "type": "string"
+    },
+    "customer_phone": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "considered",
+        "declined"
+      ],
+      "description": "Auto-evaluated: considered if >= 75% of list, otherwise declined"
+    }
+  },
+  "required": [
+    "item_title",
+    "offer_amount",
+    "customer_name",
+    "status"
+  ],
+  "rls": {
+    "create": null,
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

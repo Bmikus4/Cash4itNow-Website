@@ -1,0 +1,98 @@
+{
+  "name": "EvaluationRequest",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Requester's full name"
+    },
+    "email": {
+      "type": "string",
+      "description": "Requester's email address"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Requester's phone number"
+    },
+    "message": {
+      "type": "string",
+      "description": "Description of items to evaluate"
+    },
+    "preferred_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Preferred date for estate visit"
+    },
+    "preferred_time": {
+      "type": "string",
+      "enum": [
+        "Morning (8am\u201312pm)",
+        "Afternoon (12pm\u20134pm)",
+        "Evening (4pm\u20137pm)",
+        "Flexible \u2013 Any Time"
+      ],
+      "description": "Preferred time window for the visit"
+    },
+    "photo_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Uploaded photos of the collection"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "contacted",
+        "scheduled",
+        "completed"
+      ],
+      "default": "new",
+      "description": "Request status"
+    }
+  },
+  "required": [
+    "name",
+    "phone"
+  ],
+  "rls": {
+    "create": null,
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

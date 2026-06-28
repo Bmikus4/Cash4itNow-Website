@@ -1,0 +1,63 @@
+{
+  "name": "PastSale",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Sale title"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the sale took place"
+    },
+    "location": {
+      "type": "string",
+      "description": "City or neighborhood of the sale"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of the estate / highlights"
+    },
+    "gross_sales": {
+      "type": "number",
+      "description": "Total amount grossed at the sale"
+    },
+    "photo_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Photos from the sale"
+    },
+    "highlight_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Notable items sold (e.g. 'Vintage Records', 'Military Medals')"
+    }
+  },
+  "required": [
+    "title",
+    "date"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
