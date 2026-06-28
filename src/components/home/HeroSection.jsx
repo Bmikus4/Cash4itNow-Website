@@ -1,35 +1,13 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Phone, ArrowDown } from "lucide-react";
-
-// Original flyer uploaded by user
-const ORIGINAL_FLYER = "https://media.base44.com/images/public/user_69ff81ce6a255b9a16af7298/14dc69cc4_Screenshot_20260524_215817_Facebook.jpg";
+import BeforeAfterSlider from "@/components/home/BeforeAfterSlider";
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-foreground pt-16">
-      {/* Split: left = text, right = original flyer collage */}
-      <div className="absolute inset-0 flex">
-        <div className="w-full md:w-1/2 bg-foreground" />
-        <div className="hidden md:block w-1/2 relative overflow-hidden">
-          <img
-            src={ORIGINAL_FLYER}
-            alt="Cash 4 It Now collectibles"
-            className="w-full h-full object-cover object-top opacity-60"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/40 to-transparent" />
-        </div>
-      </div>
-
-      {/* Mobile background */}
-      <div className="absolute inset-0 md:hidden">
-        <img src={ORIGINAL_FLYER} alt="Cash 4 It Now collectibles" className="w-full h-full object-cover object-top opacity-20" />
-      </div>
-
-      {/* Red corner accent */}
-      <div className="absolute top-0 right-0 w-0 h-0 border-t-[120px] border-t-accent border-l-[120px] border-l-transparent opacity-90 hidden md:block" />
-
-      <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-10 w-full py-16 md:py-24">
+    <section className="relative min-h-screen flex flex-col md:flex-row overflow-hidden bg-foreground pt-16">
+      {/* Left: headline + CTAs */}
+      <div className="relative z-10 flex items-center w-full md:w-1/2 px-6 md:px-10 py-16 md:py-24">
         <div className="max-w-2xl">
           {/* Veteran badge */}
           <motion.div
@@ -123,8 +101,28 @@ export default function HeroSection() {
         </div>
       </div>
 
+      {/* Right: before / after estate cleanout slider */}
       <motion.div
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3, duration: 0.6 }}
+        className="relative w-full md:w-1/2 h-[55vh] md:h-auto md:min-h-screen"
+      >
+        <BeforeAfterSlider
+          beforeSrc="/hero-before.webp"
+          afterSrc="/hero-after.webp"
+          beforeLabel="Before"
+          afterLabel="After"
+          className="absolute inset-0 w-full h-full"
+        />
+        {/* Blend the slider into the dark column on desktop */}
+        <div className="hidden md:block absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-foreground to-transparent pointer-events-none" />
+        {/* Red corner accent */}
+        <div className="absolute top-0 right-0 w-0 h-0 border-t-[120px] border-t-accent border-l-[120px] border-l-transparent opacity-90 hidden md:block pointer-events-none" />
+      </motion.div>
+
+      <motion.div
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 pointer-events-none"
         animate={{ y: [0, 8, 0] }}
         transition={{ duration: 2, repeat: Infinity }}
       >
