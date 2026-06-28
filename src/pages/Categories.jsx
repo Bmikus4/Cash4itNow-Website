@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Phone } from "lucide-react";
 
-const ORIGINAL_FLYER = "https://media.base44.com/images/public/user_69ff81ce6a255b9a16af7298/14dc69cc4_Screenshot_20260524_215817_Facebook.jpg";
+const ORIGINAL_FLYER = "/img/14dc69cc4_Screenshot_20260524_215817_Facebook.webp";
 
 const categories = [
   {
@@ -18,17 +18,17 @@ const categories = [
   {
     title: "Uniforms, Medals, Military Artifacts & Swords",
     items: ["Military Uniforms", "Medals", "Swords", "Historical Artifacts", "Cap Guns", "Shell Boxes", "Decoys", "Military Memorabilia"],
-    image: "https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/fddd29a83_generated_image.png",
+    image: "/img/fddd29a83_generated_image.webp",
   },
   {
     title: "Fine Jewelry & Vintage Costume Jewelry",
     items: ["Fine Jewelry", "Turquoise Jewelry", "Vintage Costume Jewelry", "Weiss", "Trifari", "Miriam Haskell", "Rhinestone Pieces", "Brooches", "Necklaces"],
-    image: "https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/f3522ea84_generated_image.png",
+    image: "/img/f3522ea84_generated_image.webp",
   },
   {
     title: "Signs & Advertising",
     items: ["Advertising Signs", "Old Signs", "Oil Cans", "Pop Bottles"],
-    image: "https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/6414adcb0_Screenshot_20260527_201908_Instagram.jpg",
+    image: "/img/6414adcb0_Screenshot_20260527_201908_Instagram.webp",
   },
   {
     title: "Sports & Cards",
@@ -53,7 +53,7 @@ const categories = [
   {
     title: "Americana",
     items: ["American Flags", "Uncle Sam Tins", "Patriotic Eagles", "Route 66 Signs", "Statue of Liberty Souvenirs", "4th of July Decor", "Political Buttons", "Patriotic Ribbons", "Liberty Bells", "Vintage Postcards", "Patriotic Toys", "Presidential Items"],
-    image: "https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/4fd36c129_generated_image.png",
+    image: "/img/4fd36c129_generated_image.webp",
   },
 ];
 
@@ -102,29 +102,29 @@ export default function Categories() {
               <div className="w-full md:w-2/5 overflow-hidden">
                 {cat.collage ? (
                   <div className="w-full h-56 md:h-80 overflow-hidden">
-                    <img src="https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/3065f1e9c_generated_image.png" alt="Vintage Tonka Truck, Matchbox Car, GI Joe, Pedal Car, Atari, Nintendo" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                    <img src="/img/3065f1e9c_generated_image.webp" alt="Vintage Tonka Truck, Matchbox Car, GI Joe, Pedal Car, Atari, Nintendo" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                   </div>
                 ) : cat.collage7 ? (
                   <div className="w-full h-56 md:h-80 grid grid-cols-2 gap-0.5">
-                    <img src="https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/96588d74a_generated_image.png" alt="Griswold Cast Iron" className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-500" />
-                    <img src="https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/2ac325373_generated_image.png" alt="Home & Décor" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                    <img src="/img/96588d74a_generated_image.webp" alt="Griswold Cast Iron" className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-500" />
+                    <img src="/img/2ac325373_generated_image.webp" alt="Home & Décor" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                   </div>
                 ) : cat.collage9 ? (
                   <div className="w-full h-56 md:h-80 grid grid-cols-2 gap-0.5">
-                    <img src="https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/2f04db7ab_generated_image.png" alt="Uranium glass collection" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
-                    <img src="https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/0bf12dc53_generated_image.png" alt="Uranium glass UV glow" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                    <img src="/img/2f04db7ab_generated_image.webp" alt="Uranium glass collection" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                    <img src="/img/0bf12dc53_generated_image.webp" alt="Uranium glass UV glow" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                   </div>
                 ) : cat.collage8 ? (
                   <div className="w-full h-56 md:h-80 grid grid-cols-2 gap-0.5">
-                    <img src="https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/ac93609f7_generated_image.png" alt="Vintage smoking pipes" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
-                    <img src="https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/63ce2e7e9_generated_image.png" alt="Vintage fountain pens" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                    <img src="/img/ac93609f7_generated_image.webp" alt="Vintage smoking pipes" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                    <img src="/img/63ce2e7e9_generated_image.webp" alt="Vintage fountain pens" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                   </div>
                 ) : cat.collage6 ? (
                   <div className="w-full h-56 md:h-80 grid grid-cols-2 grid-rows-2 gap-0.5">
-                    <img src="https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/b72c0acb4_generated_image.png" alt="Old Baseball Cards" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
-                    <img src="https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/2a1d05cb6_generated_image.png" alt="Boba Fett and Yoda Star Wars figures" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
-                    <img src="https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/4ad65e46c_generated_image.png" alt="Early Boy Scout memorabilia" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
-                    <img src="https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/983a23228_generated_image.png" alt="Pee-wee Herman style bicycle" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                    <img src="/img/b72c0acb4_generated_image.webp" alt="Old Baseball Cards" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                    <img src="/img/2a1d05cb6_generated_image.webp" alt="Boba Fett and Yoda Star Wars figures" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                    <img src="/img/4ad65e46c_generated_image.webp" alt="Early Boy Scout memorabilia" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                    <img src="/img/983a23228_generated_image.webp" alt="Pee-wee Herman style bicycle" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                   </div>
                 ) : (
                   <img src={cat.image} alt={cat.title} className="w-full h-56 md:h-80 object-cover hover:scale-105 transition-transform duration-500" />

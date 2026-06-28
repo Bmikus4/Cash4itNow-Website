@@ -2,8 +2,8 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Shield, Heart, Handshake, Phone, DollarSign } from "lucide-react";
 
-const VETERAN_IMG = "https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/69fb4adcd_generated_c67afaf6.png";
-const ESTATE_IMG = "https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/37a3cc3a9_generated_e3d6fb2b.png";
+const VETERAN_IMG = "/img/69fb4adcd_generated_c67afaf6.webp";
+const ESTATE_IMG = "/img/37a3cc3a9_generated_e3d6fb2b.webp";
 
 const values = [
   { icon: Shield, title: "Veteran Values", description: "Founded on integrity, discipline, and service. We treat every client like family." },

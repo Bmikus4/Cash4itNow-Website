@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
-const FLYER = "https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/3e4c31ddb_Screenshot_20260524_215817_Facebook.jpg";
+const FLYER = "/img/3e4c31ddb_Screenshot_20260524_215817_Facebook.webp";
 
 export default function CategoriesPreview() {
   return (

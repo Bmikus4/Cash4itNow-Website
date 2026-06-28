@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 const services = [
   {
     title: "Repairs",
-    image: "https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/c40cb01d6_generated_image.png",
+    image: "/img/c40cb01d6_generated_image.webp",
     description: "Make every listing shine with essential updates like a fresh coat of paint and touch-ups that make a big impact.",
   },
   {
@@ -14,14 +14,14 @@ const services = [
   },
   {
     title: "Deep Cleaning",
-    image: "https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/48bb4e613_generated_image.png",
+    image: "/img/48bb4e613_generated_image.webp",
     description: "We leave the property spotless — windows, walls, floors, and every corner cleaned thoroughly so the home is move-in ready.",
   },
   {
     title: "Exterior Updates",
     collage: [
-      "https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/0b5311e77_mrh-why-you-should-hire-bellevue-pressure-washing-services.webp",
-      "https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/221f22e1d_worker-painting-metal-balcony-railing-gray-renovation-work-painter-applying-paint-using-brush-355981218.jpg",
+      "/img/0b5311e77_mrh-why-you-should-hire-bellevue-pressure-washing-services.webp",
+      "/img/221f22e1d_worker-painting-metal-balcony-railing-gray-renovation-work-painter-applying-paint-using-brush-355981218.webp",
     ],
     description: "Make every first impression count and boost curb appeal with yard clean-up, power washing, exterior paint, and landscaping.",
   },

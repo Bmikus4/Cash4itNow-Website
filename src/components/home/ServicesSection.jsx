@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Home, DollarSign, Package, Truck } from "lucide-react";
 
 // Original flyer from the user — shown as a featured image
-const ORIGINAL_FLYER = "https://media.base44.com/images/public/user_69ff81ce6a255b9a16af7298/14dc69cc4_Screenshot_20260524_215817_Facebook.jpg";
+const ORIGINAL_FLYER = "/img/14dc69cc4_Screenshot_20260524_215817_Facebook.webp";
 
 const services = [
   { icon: Home, title: "Full Estate Cleanouts", description: "We handle everything — from single rooms to entire estates. Professional and thorough." },

@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import MetalPriceTicker from "@/components/home/MetalPriceTicker";
 import JewelryPayoutCalculator from "@/components/home/JewelryPayoutCalculator";
 
-const JEWELRY_IMG = "https://media.base44.com/images/public/6a13ad06c542c7c693a2018d/f3522ea84_generated_image.png";
+const JEWELRY_IMG = "/img/f3522ea84_generated_image.webp";
 
 const items = [
   "Diamond Rings & Engagement Rings",
