@@ -8,10 +8,13 @@ import ForSaleItemCard from "@/components/forsale/ForSaleItemCard";
 import CartDrawer from "@/components/forsale/CartDrawer";
 import { useCart } from "@/lib/CartContext";
 import { COMMERCE_ENABLED } from "@/lib/flags";
-import { useDocumentTitle } from "@/lib/useDocumentTitle";
+import { usePageMeta } from "@/lib/usePageMeta";
 
 export default function ForSale() {
-  useDocumentTitle("Antiques & Collectibles For Sale");
+  usePageMeta(
+    "Antiques & Collectibles For Sale",
+    "Antiques, collectibles and estate finds available now from Cash 4 It Now in Pittsburgh, PA. Tell us what you collect and we call when it turns up."
+  );
   const [showCart, setShowCart] = useState(false);
   const [filterStatus, setFilterStatus] = useState("available");
   const [searchQuery, setSearchQuery] = useState("");

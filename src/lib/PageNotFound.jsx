@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Phone, ArrowRight } from "lucide-react";
 import { CONTACT_PHONE, CONTACT_PHONE_HREF } from "@/api/leadForm";
-import { useDocumentTitle } from "@/lib/useDocumentTitle";
+import { usePageMeta } from "@/lib/usePageMeta";
 
 /**
  * A visitor who lands here mistyped a URL or followed a stale link from
@@ -13,7 +13,10 @@ import { useDocumentTitle } from "@/lib/useDocumentTitle";
  */
 export default function PageNotFound() {
   const location = useLocation();
-  useDocumentTitle("Page Not Found");
+  usePageMeta(
+    "Page Not Found",
+    "That page could not be found. Everything Cash 4 It Now buys, the upcoming estate sales, and the free evaluation form are all one tap away."
+  );
 
   return (
     <section className="bg-foreground min-h-[70vh] flex items-center px-6 md:px-10 py-20">

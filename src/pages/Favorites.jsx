@@ -6,10 +6,13 @@ import { Link } from "react-router-dom";
 import { fetchInventory, INVENTORY_QUERY_KEY } from "@/api/inventoryClient";
 import { useFavorites } from "@/lib/FavoritesContext";
 import ForSaleItemCard from "@/components/forsale/ForSaleItemCard";
-import { useDocumentTitle } from "@/lib/useDocumentTitle";
+import { usePageMeta } from "@/lib/usePageMeta";
 
 export default function Favorites() {
-  useDocumentTitle("Saved Items");
+  usePageMeta(
+    "Saved Items",
+    "The items you have saved from the Cash 4 It Now for-sale list, kept on this device and ready when you are."
+  );
   const { favorites } = useFavorites();
 
   const { data: items = [], isLoading } = useQuery({

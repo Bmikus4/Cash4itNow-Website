@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { fetchSales, saleDateRange, saleLocation, SALES_QUERY_KEY } from "@/api/salesClient";
 import CountdownTimer from "@/components/sales/CountdownTimer";
 import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
-import { useDocumentTitle } from "@/lib/useDocumentTitle";
+import { usePageMeta } from "@/lib/usePageMeta";
 
 /**
  * The catalog's item shape is not pinned by the contract yet, so both of the
@@ -38,8 +38,13 @@ export default function SalePage() {
   // person can sit on, and they need a title too. The town is in it because
   // "estate sale in Mount Lebanon" is what someone actually searches.
   const where = sale ? saleLocation(sale) : "";
-  useDocumentTitle(
-    sale ? [sale.title, where && `Estate Sale in ${where}`].filter(Boolean).join(" — ") : "Estate Sale"
+  const when = sale ? saleDateRange(sale, format) : "";
+  usePageMeta(
+    sale ? [sale.title, where && `Estate Sale in ${where}`].filter(Boolean).join(" — ") : "Estate Sale",
+    // City and state only. The contract withholds the street address until 48
+    // hours before the doors open, and a description is the last place it should
+    // leak from — search engines cache it.
+    sale ? [[where, when].filter(Boolean).join(", "), sale.description].filter(Boolean).join(". ") : null
   );
 
   if (isLoading) {

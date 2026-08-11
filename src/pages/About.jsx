@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Shield, Heart, Handshake, Phone, DollarSign } from "lucide-react";
-import { useDocumentTitle } from "@/lib/useDocumentTitle";
+import { usePageMeta } from "@/lib/usePageMeta";
 
 const VETERAN_IMG = "/img/69fb4adcd_generated_c67afaf6.webp";
 const ESTATE_IMG = "/img/37a3cc3a9_generated_e3d6fb2b.webp";
@@ -14,7 +14,10 @@ const values = [
 ];
 
 export default function About() {
-  useDocumentTitle("Our Story");
+  usePageMeta(
+    "Our Story",
+    "Veteran-owned estate liquidators serving Pittsburgh and Western Pennsylvania. How we work, what we pay for, and why families trust us with an estate."
+  );
 
   return (
     <div className="pt-16 bg-background">
