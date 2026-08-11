@@ -6,6 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Cash 4 It Now — veteran-owned estate liquidation and full estate cleanout services in Pittsburgh, PA." />
     <title>Cash 4 It Now — Veteran-Owned Estate Liquidators</title>
+
+    <!-- Static share defaults, so a share scraped before the app runs is not
+         bare. usePageMeta replaces these per route once it mounts. og:url and
+         og:image are deliberately absent: both need an absolute URL and the
+         production domain is not settled — see SITE_ORIGIN in
+         src/lib/usePageMeta.js, which is the one place to fill in. -->
+    <meta property="og:title" content="Cash 4 It Now — Veteran-Owned Estate Liquidators" />
+    <meta property="og:description" content="Cash 4 It Now — veteran-owned estate liquidation and full estate cleanout services in Pittsburgh, PA." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Cash 4 It Now" />
+    <meta name="twitter:card" content="summary" />
   </head>
   <body>
     <div id="root"></div>

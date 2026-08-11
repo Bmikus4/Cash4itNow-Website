@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Shield, Heart, Handshake, Phone, DollarSign } from "lucide-react";
 import { usePageMeta } from "@/lib/usePageMeta";
+import { useJsonLd, breadcrumbGraph } from "@/lib/structuredData";
 
 const VETERAN_IMG = "/img/69fb4adcd_generated_c67afaf6.webp";
 const ESTATE_IMG = "/img/37a3cc3a9_generated_e3d6fb2b.webp";
@@ -14,9 +15,17 @@ const values = [
 ];
 
 export default function About() {
-  usePageMeta(
-    "Our Story",
-    "Veteran-owned estate liquidators serving Pittsburgh and Western Pennsylvania. How we work, what we pay for, and why families trust us with an estate."
+  usePageMeta({
+    title: "Our Story",
+    description:
+      "Veteran-owned estate liquidators serving Pittsburgh and Western Pennsylvania. How we work, what we pay for, and why families trust us with an estate.",
+  });
+  useJsonLd(
+    "breadcrumb",
+    breadcrumbGraph([
+      { name: "Home", path: "/" },
+      { name: "Our Story", path: "/about" },
+    ])
   );
 
   return (

@@ -13,10 +13,15 @@ import { usePageMeta } from "@/lib/usePageMeta";
  */
 export default function PageNotFound() {
   const location = useLocation();
-  usePageMeta(
-    "Page Not Found",
-    "That page could not be found. Everything Cash 4 It Now buys, the upcoming estate sales, and the free evaluation form are all one tap away."
-  );
+  // noindex: an error page must never be a search result, and crawl budget spent
+  // here is budget not spent on sale pages. follow, so the links out of it still
+  // feed the crawl.
+  usePageMeta({
+    title: "Page Not Found",
+    description:
+      "That page could not be found. Everything Cash 4 It Now buys, the upcoming estate sales, and the free evaluation form are all one tap away.",
+    robots: "noindex, follow",
+  });
 
   return (
     <section className="bg-foreground min-h-[70vh] flex items-center px-6 md:px-10 py-20">

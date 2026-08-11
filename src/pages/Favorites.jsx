@@ -9,10 +9,16 @@ import ForSaleItemCard from "@/components/forsale/ForSaleItemCard";
 import { usePageMeta } from "@/lib/usePageMeta";
 
 export default function Favorites() {
-  usePageMeta(
-    "Saved Items",
-    "The items you have saved from the Cash 4 It Now for-sale list, kept on this device and ready when you are."
-  );
+  // noindex: this list lives in one browser's localStorage, so an indexed copy
+  // is a search result describing an empty page to everyone but its owner, and
+  // crawl budget spent here is budget not spent on sale pages. follow, so the
+  // crawl paths through it survive.
+  usePageMeta({
+    title: "Saved Items",
+    description:
+      "The items you have saved from the Cash 4 It Now for-sale list, kept on this device and ready when you are.",
+    robots: "noindex, follow",
+  });
   const { favorites } = useFavorites();
 
   const { data: items = [], isLoading } = useQuery({

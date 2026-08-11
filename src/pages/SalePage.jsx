@@ -8,6 +8,7 @@ import { fetchSales, saleDateRange, saleLocation, SALES_QUERY_KEY } from "@/api/
 import CountdownTimer from "@/components/sales/CountdownTimer";
 import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
 import { usePageMeta } from "@/lib/usePageMeta";
+import { useJsonLd, breadcrumbGraph } from "@/lib/structuredData";
 
 /**
  * The catalog's item shape is not pinned by the contract yet, so both of the
@@ -39,12 +40,30 @@ export default function SalePage() {
   // "estate sale in Mount Lebanon" is what someone actually searches.
   const where = sale ? saleLocation(sale) : "";
   const when = sale ? saleDateRange(sale, format) : "";
-  usePageMeta(
-    sale ? [sale.title, where && `Estate Sale in ${where}`].filter(Boolean).join(" — ") : "Estate Sale",
-    // City and state only. The contract withholds the street address until 48
-    // hours before the doors open, and a description is the last place it should
-    // leak from — search engines cache it.
-    sale ? [[where, when].filter(Boolean).join(", "), sale.description].filter(Boolean).join(". ") : null
+  // RULE: city and state only, NEVER the street address.
+  //
+  // The contract withholds a sale's street address until 48 hours before the
+  // doors open, and a search snippet is the worst place for it to leak from,
+  // because the snippet outlives the page: it is fetched once, cached, and served
+  // long after this sale is over and the house is empty. `saleLocation()` returns
+  // city and state and nothing else — do not "improve" this by reaching for an
+  // address field, whichever way the feed later carries one.
+  usePageMeta({
+    title: sale ? [sale.title, where && `Estate Sale in ${where}`].filter(Boolean).join(" — ") : "Estate Sale",
+    description: sale
+      ? [[where, when].filter(Boolean).join(", "), sale.description].filter(Boolean).join(". ")
+      : undefined,
+  });
+  // No Event graph: that needs the feed, which returns nothing without a
+  // database. A breadcrumb is what this page can carry honestly today.
+  useJsonLd(
+    "breadcrumb",
+    sale
+      ? breadcrumbGraph([
+          { name: "Home", path: "/" },
+          { name: sale.title, path: `/sale/${slug}` },
+        ])
+      : null
   );
 
   if (isLoading) {

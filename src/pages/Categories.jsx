@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Phone } from "lucide-react";
 import { usePageMeta } from "@/lib/usePageMeta";
+import { useJsonLd, offerCatalogGraph, breadcrumbGraph } from "@/lib/structuredData";
 
 const ORIGINAL_FLYER = "/img/14dc69cc4_Screenshot_20260524_215817_Facebook.webp";
 
@@ -65,9 +66,18 @@ const additionalItems = [
 ];
 
 export default function Categories() {
-  usePageMeta(
-    "What We Buy",
-    "Records, toys, military items, jewelry, signs, cast iron, glass and more — the full list of what Cash 4 It Now buys across Pittsburgh and Western Pennsylvania."
+  usePageMeta({
+    title: "What We Buy",
+    description:
+      "Records, toys, military items, jewelry, signs, cast iron, glass and more — the full list of what Cash 4 It Now buys across Pittsburgh and Western Pennsylvania.",
+  });
+  useJsonLd("offer-catalog", offerCatalogGraph(categories, additionalItems));
+  useJsonLd(
+    "breadcrumb",
+    breadcrumbGraph([
+      { name: "Home", path: "/" },
+      { name: "What We Buy", path: "/categories" },
+    ])
   );
 
   return (

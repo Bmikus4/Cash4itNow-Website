@@ -9,11 +9,20 @@ import CartDrawer from "@/components/forsale/CartDrawer";
 import { useCart } from "@/lib/CartContext";
 import { COMMERCE_ENABLED } from "@/lib/flags";
 import { usePageMeta } from "@/lib/usePageMeta";
+import { useJsonLd, breadcrumbGraph } from "@/lib/structuredData";
 
 export default function ForSale() {
-  usePageMeta(
-    "Antiques & Collectibles For Sale",
-    "Antiques, collectibles and estate finds available now from Cash 4 It Now in Pittsburgh, PA. Tell us what you collect and we call when it turns up."
+  usePageMeta({
+    title: "Antiques & Collectibles For Sale",
+    description:
+      "Antiques, collectibles and estate finds available now from Cash 4 It Now in Pittsburgh, PA. Tell us what you collect and we call when it turns up.",
+  });
+  useJsonLd(
+    "breadcrumb",
+    breadcrumbGraph([
+      { name: "Home", path: "/" },
+      { name: "For Sale", path: "/for-sale" },
+    ])
   );
   const [showCart, setShowCart] = useState(false);
   const [filterStatus, setFilterStatus] = useState("available");
