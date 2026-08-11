@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Calendar, ArrowRight, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
-import { fetchSales, saleDateRange, saleLocation, SALES_QUERY_KEY } from "@/api/salesClient";
+import { fetchSales, saleDateRange, saleGridClass, saleLocation, SALES_QUERY_KEY } from "@/api/salesClient";
 import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
 import CountdownTimer from "@/components/sales/CountdownTimer";
 
@@ -32,7 +32,7 @@ export default function UpcomingSalesSection() {
           <div className="h-1.5 bg-accent w-24 mx-auto mt-3" />
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className={`grid gap-6 ${saleGridClass(sales.length)}`}>
           {sales.map((sale, i) => (
             <motion.div
               key={sale.slug}

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { CalendarCheck, MapPin } from "lucide-react";
 import { format } from "date-fns";
-import { fetchSales, saleDateRange, saleLocation, SALES_QUERY_KEY } from "@/api/salesClient";
+import { fetchSales, saleDateRange, saleGridClass, saleLocation, SALES_QUERY_KEY } from "@/api/salesClient";
 
 export default function PastSalesSection() {
   const { data, isLoading } = useQuery({ queryKey: SALES_QUERY_KEY, queryFn: fetchSales });
@@ -30,7 +30,7 @@ export default function PastSalesSection() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className={`grid gap-6 ${saleGridClass(sales.length)}`}>
           {sales.map((sale, i) => (
             <motion.div
               key={sale.slug}

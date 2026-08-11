@@ -143,9 +143,11 @@ export default function HeroSection() {
             transition={{ delay: 0.7 }}
             className="mt-4"
           >
+            {/* w-full on mobile so all three CTAs share one edge; the two above
+                are flex children of a column and stretch by default. */}
             <a
               href="#services"
-              className="inline-flex items-center justify-center gap-2 border-2 border-accent text-accent px-8 py-5 font-heading font-bold text-lg uppercase tracking-wide hover:bg-accent hover:text-white transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border-2 border-accent text-accent px-8 py-5 font-heading font-bold text-lg uppercase tracking-wide hover:bg-accent hover:text-white transition-colors"
             >
               How We Get It Done
               <ArrowDown className="w-5 h-5" />

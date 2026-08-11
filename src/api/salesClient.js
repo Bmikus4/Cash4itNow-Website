@@ -84,6 +84,17 @@ export async function fetchSales() {
   return { upcoming: asArray(data?.upcoming), past: asArray(data?.past) };
 }
 
+/**
+ * A three-column grid holding two cards leaves a dead third column under a
+ * centred heading. Both sale sections routinely run one or two, so the track
+ * count follows the card count and the row stays centred.
+ */
+export function saleGridClass(count) {
+  if (count === 1) return "grid-cols-1 max-w-md mx-auto";
+  if (count === 2) return "grid-cols-1 md:grid-cols-2 max-w-3xl mx-auto";
+  return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
+}
+
 /** "Mount Lebanon, PA" — the whole location a listing gets before the sale week. */
 export function saleLocation(sale) {
   return [sale?.city, sale?.state].filter(Boolean).join(", ");
