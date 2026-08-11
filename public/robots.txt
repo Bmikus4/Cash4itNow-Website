@@ -1,0 +1,17 @@
+# https://www.cash4itnow.com/robots.txt
+#
+# Everything here is meant to be found. Nothing is disallowed, deliberately.
+#
+# Saved Items and the 404 page are kept out of search by a noindex directive on
+# the pages themselves, NOT by a Disallow line here. Those two mechanisms defeat
+# each other: a disallowed URL is never fetched, so the crawler never reads the
+# noindex, and a URL linked from anywhere else can still end up indexed with no
+# description at all. Pick one, and noindex is the one that actually removes a
+# page from results. Do not "tighten" this by adding Disallow: /favorites.
+#
+# No Sitemap line: there is no sitemap.xml in this repo yet. Pointing at one
+# that does not exist buys a 404 in every crawler's report and tells them
+# nothing.
+
+User-agent: *
+Allow: /
