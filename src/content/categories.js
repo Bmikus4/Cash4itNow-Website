@@ -14,6 +14,14 @@
  * changed nothing about what the site claims. A new category comes from Ben or
  * from the flyer's own wording, never from what seems likely to sell.
  *
+ * CLOCKS and WATCHES were added on Ben's word, 2026-08-11 ("yes we buy clocks
+ * and watches, add them"), after the flyer was found to list CLOCKS while the
+ * site named it nowhere. They went into the two existing categories rather than
+ * into a new one BECAUSE a new "Clocks & Watches" heading would have carried two
+ * items where the others carry four to fifteen — and the only way to make it
+ * look like the rest would have been to invent pocket watches, mantel clocks and
+ * makers nobody has confirmed. Thin-and-true beat full-and-invented.
+ *
  * The `image`/`collage*` flags are presentational and belong to the /categories
  * layout. They are kept here rather than split out because splitting them would
  * mean a second file keyed by title — the same two-lists problem in a new shape.
@@ -35,8 +43,11 @@ export const CATEGORIES = [
     image: "/img/fddd29a83_generated_image.webp",
   },
   {
-    title: "Fine Jewelry & Vintage Costume Jewelry",
-    items: ["Fine Jewelry", "Turquoise Jewelry", "Vintage Costume Jewelry", "Weiss", "Trifari", "Miriam Haskell", "Rhinestone Pieces", "Brooches", "Necklaces"],
+    // Title extended to name watches. The other titles either enumerate what is
+    // under them or are broad enough to cover it; this one enumerates, so an
+    // unnamed Watches would be a claim a reader scanning headings never finds.
+    title: "Fine Jewelry, Watches & Vintage Costume Jewelry",
+    items: ["Fine Jewelry", "Watches", "Turquoise Jewelry", "Vintage Costume Jewelry", "Weiss", "Trifari", "Miriam Haskell", "Rhinestone Pieces", "Brooches", "Necklaces"],
     image: "/img/f3522ea84_generated_image.webp",
   },
   {
@@ -51,7 +62,7 @@ export const CATEGORIES = [
   },
   {
     title: "Home & Décor",
-    items: ["Pottery", "Crocks", "Jugs", "Old Bowls", "Chairs", "Rugs", "Lamps", "Lighting", "Trunks", "Oil Paintings", "Weathervanes", "Doorstops", "Wagon Wheels", "Griswold Cast Iron"],
+    items: ["Pottery", "Crocks", "Jugs", "Old Bowls", "Chairs", "Rugs", "Lamps", "Lighting", "Clocks", "Trunks", "Oil Paintings", "Weathervanes", "Doorstops", "Wagon Wheels", "Griswold Cast Iron"],
     collage7: true,
   },
   {
