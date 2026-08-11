@@ -1,22 +1,32 @@
 import React, { useState } from "react";
 import { MessageSquare, Loader2, Check } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { useLeadForm } from "@/api/leadForm";
 
 export default function SaleCouponSignup({ sale }) {
   const [phone, setPhone] = useState("");
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
+  const { honeypotField, submit } = useLeadForm();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!phone.trim()) return;
     setSending(true);
-    await base44.entities.CouponRequest.create({
+    const result = await submit("sale_coupon", {
       phone: phone.trim(),
-      sale_title: sale.title,
-      sale_date: sale.date || null,
+      payload: {
+        saleTitle: sale.title,
+        saleSlug: sale.slug || undefined,
+        saleDate: sale.startsAt || sale.date || undefined,
+      },
     });
     setSending(false);
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    setError("");
     setDone(true);
   };
 
@@ -33,6 +43,7 @@ export default function SaleCouponSignup({ sale }) {
 
   return (
     <form onSubmit={handleSubmit} className="mt-4 border-2 border-accent/40 bg-accent/10 p-3">
+      {honeypotField}
       <div className="flex items-center gap-2 mb-2">
         <MessageSquare className="w-4 h-4 text-accent flex-shrink-0" />
         <p className="font-heading font-black text-background text-xs uppercase tracking-wider leading-tight">
@@ -58,6 +69,7 @@ export default function SaleCouponSignup({ sale }) {
           {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Send"}
         </button>
       </div>
+      {error && <p className="text-background/70 text-xs mt-2 leading-snug">{error}</p>}
     </form>
   );
 }

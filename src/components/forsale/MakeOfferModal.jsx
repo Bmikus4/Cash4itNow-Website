@@ -1,14 +1,18 @@
 import React, { useState } from "react";
 import { X, Loader2, Handshake } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { useLeadForm, CONTACT_PHONE } from "@/api/leadForm";
 import { toast } from "sonner";
 
 export default function MakeOfferModal({ item, onClose }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", offer: "", message: "" });
   const [submitting, setSubmitting] = useState(false);
+  const { honeypotField, submit } = useLeadForm();
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
+  // Every offer is forwarded and a human decides. The old auto-reject below 75%
+  // of list ran in a stub that never reached anyone, and a machine turning a
+  // buyer away is a lost negotiation, not a saved one.
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.offer) {
@@ -16,29 +20,25 @@ export default function MakeOfferModal({ item, onClose }) {
       return;
     }
     setSubmitting(true);
-    try {
-      const res = await base44.functions.invoke("processOffer", {
-        item_title: item.title,
-        item_id: item.id,
-        listed_price: item.price,
-        offer_amount: form.offer,
-        customer_name: form.name,
-        customer_email: form.email,
-        customer_phone: form.phone,
-        message: form.message,
-      });
-      const result = res.data || res;
-      if (result.status === "considered") {
-        toast.success("Your offer is being considered. We'll be in touch soon!");
-      } else {
-        toast.error("We're unable to accept offers below 75% of the listed price.");
-      }
-      onClose();
-    } catch (err) {
-      toast.error("Something went wrong. Please try again or call us.");
-    } finally {
-      setSubmitting(false);
+    const result = await submit("item_offer", {
+      name: form.name,
+      email: form.email || undefined,
+      phone: form.phone || undefined,
+      message: form.message || undefined,
+      payload: {
+        itemId: item.id,
+        itemTitle: item.title,
+        listedPrice: item.price,
+        offerAmount: form.offer,
+      },
+    });
+    setSubmitting(false);
+    if (!result.ok) {
+      toast.error(`${result.message} Or call ${CONTACT_PHONE}.`);
+      return;
     }
+    toast.success(result.message);
+    onClose();
   };
 
   return (
@@ -58,6 +58,7 @@ export default function MakeOfferModal({ item, onClose }) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {honeypotField}
           <div className="bg-muted/40 border border-foreground/10 p-3">
             <p className="font-heading font-black text-sm uppercase tracking-tight">{item.title}</p>
             <p className="text-muted-foreground text-xs mt-0.5">Listed at ${Number(item.price).toFixed(2)}</p>

@@ -1,18 +1,26 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Phone, Mail, MapPin } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { useLeadForm, CONTACT_PHONE, CONTACT_PHONE_HREF } from "@/api/leadForm";
 
 export default function Footer() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState(null); // null | "loading" | "success" | "error"
+  const [error, setError] = useState("");
+  const { honeypotField, submit } = useLeadForm();
 
   const handleSubscribe = async (e) => {
     e.preventDefault();
     if (!email) return;
     setStatus("loading");
-    await base44.entities.NewsletterSubscriber.create({ email });
+    const result = await submit("footer_newsletter", { email });
+    if (!result.ok) {
+      setStatus("error");
+      setError(result.message);
+      return;
+    }
     setStatus("success");
+    setError("");
     setEmail("");
   };
 
@@ -37,7 +45,7 @@ export default function Footer() {
             <p className="text-background/70 text-sm leading-relaxed">
               Veteran-owned. Full estate liquidation services across Western Pennsylvania. We pay cash on the spot.
             </p>
-            <p className="font-heading font-bold text-background text-lg mt-4">🇺🇸 Veteran-Owned</p>
+            <p className="font-heading font-bold text-background text-lg mt-4">Veteran-Owned</p>
           </div>
 
           <div>
@@ -90,9 +98,10 @@ export default function Footer() {
             <p className="text-background/60 text-sm">Be the first to know when we post new inventory or upcoming estate sales.</p>
           </div>
           {status === "success" ? (
-            <p className="text-center font-heading font-bold text-accent uppercase tracking-widest text-sm">✓ You're on the list!</p>
+            <p className="text-center font-heading font-bold text-accent uppercase tracking-widest text-sm">You're on the list!</p>
           ) : (
             <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-0 max-w-md mx-auto">
+              {honeypotField}
               <input
                 type="email"
                 required
@@ -109,6 +118,14 @@ export default function Footer() {
                 {status === "loading" ? "..." : "Subscribe"}
               </button>
             </form>
+          )}
+          {status === "error" && (
+            <p className="text-center text-background/70 text-sm mt-3">
+              {error}{" "}
+              <a href={CONTACT_PHONE_HREF} className="font-heading font-bold text-accent hover:underline">
+                {CONTACT_PHONE}
+              </a>
+            </p>
           )}
         </div>
 

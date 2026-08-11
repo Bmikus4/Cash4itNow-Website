@@ -1,11 +1,11 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Phone, Send, Upload, X, CheckCircle } from "lucide-react";
+import { Phone, Send, CheckCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
+import { useLeadForm, CONTACT_PHONE, CONTACT_PHONE_HREF } from "@/api/leadForm";
 
 const ITEM_TYPES = [
   "Records & Music", "Toys & Collectibles", "Military & Weapons",
@@ -15,22 +15,9 @@ const ITEM_TYPES = [
 
 export default function CtaSection() {
   const [form, setForm] = useState({ name: "", phone: "", property_address: "", item_type: "" });
-  const [photos, setPhotos] = useState([]);
   const [sending, setSending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const fileInputRef = useRef(null);
-
-  const handlePhotoSelect = (e) => {
-    const files = Array.from(e.target.files);
-    const newPhotos = files.map((file) => ({
-      file,
-      previewUrl: URL.createObjectURL(file),
-    }));
-    setPhotos((prev) => [...prev, ...newPhotos].slice(0, 6));
-    e.target.value = "";
-  };
-
-  const removePhoto = (idx) => setPhotos((prev) => prev.filter((_, i) => i !== idx));
+  const { honeypotField, submit } = useLeadForm();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,34 +27,19 @@ export default function CtaSection() {
     }
     setSending(true);
 
-    const uploadedUrls = [];
-    for (const photo of photos) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: photo.file });
-      uploadedUrls.push(file_url);
-    }
-
-    await base44.entities.EvaluationRequest.create({
+    const result = await submit("home_cta_evaluation", {
       name: form.name,
       phone: form.phone,
-      message: `Property Address: ${form.property_address || "Not provided"}\nItem Type: ${form.item_type || "Not specified"}`,
-      photo_urls: uploadedUrls,
-    });
-
-    const photoLinks = uploadedUrls.map((url, i) => `<a href="${url}">Photo ${i + 1}</a>`).join(" | ");
-    await base44.integrations.Core.SendEmail({
-      to: "info@cash4itnow.com",
-      subject: `New Evaluation Request from ${form.name}`,
-      body: `
-        <h2>New Evaluation Request</h2>
-        <p><strong>Name:</strong> ${form.name}</p>
-        <p><strong>Phone:</strong> ${form.phone}</p>
-        <p><strong>Property Address:</strong> ${form.property_address || "Not provided"}</p>
-        <p><strong>Item Type:</strong> ${form.item_type || "Not specified"}</p>
-        ${uploadedUrls.length > 0 ? `<p><strong>Photos:</strong> ${photoLinks}</p>` : ""}
-      `,
+      propertyAddress: form.property_address || undefined,
+      message: form.item_type ? `Item type: ${form.item_type}` : undefined,
+      payload: form.item_type ? { itemType: form.item_type } : undefined,
     });
 
     setSending(false);
+    if (!result.ok) {
+      toast.error(`${result.message} Or call ${CONTACT_PHONE}.`);
+      return;
+    }
     setSubmitted(true);
   };
 
@@ -120,6 +92,7 @@ export default function CtaSection() {
           transition={{ delay: 0.15 }}
         >
           <form onSubmit={handleSubmit} className="bg-white p-8 md:p-10 space-y-5">
+            {honeypotField}
             {/* Name & Phone */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="space-y-1.5">
@@ -177,41 +150,15 @@ export default function CtaSection() {
               </div>
             </div>
 
-            {/* Photo Upload */}
-            <div className="space-y-3">
-              <Label className="font-heading text-xs uppercase tracking-widest text-foreground/60 font-bold">
-                Upload Photos (optional, up to 6)
-              </Label>
-              <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhotoSelect} className="hidden" />
-              {photos.length < 6 && (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full border-2 border-dashed border-foreground/20 hover:border-accent hover:bg-accent/5 transition-colors p-5 flex items-center justify-center gap-3 text-foreground/50"
-                >
-                  <Upload className="w-5 h-5" />
-                  <span className="font-heading font-bold text-sm uppercase tracking-wide">Click to upload photos</span>
-                </button>
-              )}
-              {photos.length > 0 && (
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {photos.map((p, i) => (
-                    <div key={i} className="relative aspect-square border border-foreground/20 overflow-hidden">
-                      <img src={p.previewUrl} alt={`upload-${i}`} className="w-full h-full object-cover" />
-                      {!sending && (
-                        <button
-                          type="button"
-                          onClick={() => removePhoto(i)}
-                          className="absolute top-0.5 right-0.5 w-5 h-5 bg-accent text-white flex items-center justify-center"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Photos travel by text: there is no upload endpoint, and an
+                uploader that silently discards files is the bug we are fixing. */}
+            <p className="text-foreground/50 text-sm">
+              Got photos? Text them to{" "}
+              <a href={CONTACT_PHONE_HREF} className="font-heading font-bold text-accent hover:underline">
+                {CONTACT_PHONE}
+              </a>{" "}
+              after you send this.
+            </p>
 
             {/* Submit */}
             <div className="flex flex-col sm:flex-row gap-4 items-center pt-1">

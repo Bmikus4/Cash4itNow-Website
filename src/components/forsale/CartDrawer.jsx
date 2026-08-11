@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { base44 } from "@/api/base44Client";
+import { useLeadForm, CONTACT_PHONE } from "@/api/leadForm";
 import { toast } from "sonner";
 
 export default function CartDrawer({ onClose }) {
@@ -13,6 +13,7 @@ export default function CartDrawer({ onClose }) {
   const [step, setStep] = useState("cart"); // "cart" | "checkout" | "success"
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [sending, setSending] = useState(false);
+  const { honeypotField, submit } = useLeadForm();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,15 +23,25 @@ export default function CartDrawer({ onClose }) {
     }
     setSending(true);
 
-    const itemList = cartItems.map((i) => `• ${i.title} — $${Number(i.price).toFixed(2)}`).join("\n");
-
-    await base44.integrations.Core.SendEmail({
-      to: "info@cash4itnow.com",
-      subject: `Cart Inquiry: ${cartItems.length} item(s) — $${total.toFixed(2)}`,
-      body: `New cart inquiry from the website:\n\nItems:\n${itemList}\n\nTotal: $${total.toFixed(2)}\n\nFrom:\nName: ${form.name}\nEmail: ${form.email}\nPhone: ${form.phone}\n\nMessage:\n${form.message || "No message provided."}`,
+    const result = await submit("item_offer", {
+      name: form.name,
+      email: form.email || undefined,
+      phone: form.phone,
+      message: form.message || undefined,
+      payload: {
+        intent: "cart_inquiry",
+        cartTotal: total,
+        items: cartItems.map((i) => ({ id: i.id, title: i.title, price: i.price })),
+      },
     });
 
     setSending(false);
+    if (!result.ok) {
+      toast.error(`${result.message} Or call ${CONTACT_PHONE}.`);
+      return;
+    }
+    // The cart is only cleared once the server has the inquiry — clearing on a
+    // failed submit would destroy the visitor's selection along with the lead.
     setStep("success");
     clearCart();
   };
@@ -91,6 +102,7 @@ export default function CartDrawer({ onClose }) {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
+                {honeypotField}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="font-heading text-xs uppercase tracking-widest text-muted-foreground font-bold">Name *</Label>
