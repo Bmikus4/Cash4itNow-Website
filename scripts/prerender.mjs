@@ -20,11 +20,13 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   routesFromApp,
+  postExpansions,
   outputPathFor,
   countHiddenSections,
   stripNondeterminism,
   skipLine,
 } from "./prerender/lib.mjs";
+import { POSTS } from "../src/content/posts.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROOT, "dist");
@@ -99,7 +101,10 @@ async function main() {
     return;
   }
 
-  const { static: staticRoutes, dynamic } = routesFromApp(fs.readFileSync(path.join(ROOT, "src/App.jsx"), "utf8"));
+  const { static: staticRoutes, dynamic } = routesFromApp(
+    fs.readFileSync(path.join(ROOT, "src/App.jsx"), "utf8"),
+    postExpansions(POSTS)
+  );
   log(`PRERENDER: ${staticRoutes.length} static routes from src/App.jsx: ${staticRoutes.join(" ")}`);
   for (const route of dynamic) {
     skipped.push(route);
@@ -149,6 +154,21 @@ async function main() {
     session?.ws.close();
     chrome?.kill();
     server.close();
+  }
+
+  // A skipped STATIC route still needs the file its rewrite names, or degrading
+  // stops being degradation: vercel.json points /about at /about/index.html
+  // unconditionally, so a run with no browser would ship rewrites aimed at files
+  // that do not exist and 404 the whole site while the build stayed green. The
+  // shell is exactly the right fallback — it is what an un-snapshotted route was
+  // always meant to serve — and copying it is the same move vite.config makes for
+  // 404.html. Deterministic: a byte copy of a file this build just produced.
+  const shell = fs.readFileSync(path.join(DIST, "index.html"));
+  for (const route of staticRoutes.filter((r) => !written.includes(r))) {
+    const out = path.join(DIST, outputPathFor(route));
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    fs.writeFileSync(out, shell);
+    log(`  shell   ${route} -> dist/${outputPathFor(route)} (client-rendered, but the rewrite's target now exists)`);
   }
 
   log(`PRERENDER: ${written.length} snapshotted, ${skipped.length} left client-rendered.`);

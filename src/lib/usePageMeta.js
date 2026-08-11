@@ -46,7 +46,27 @@ function upsertMeta(attr, key, content) {
 }
 
 /**
- * Sets the title, description, Open Graph and Twitter meta for a route.
+ * Creates or updates the one `<link rel="canonical">`. Never removed: every
+ * route on this site has exactly one correct URL, so a page without a canonical
+ * is a page that can be indexed twice — once with a tracking query string off a
+ * Facebook post, once clean.
+ *
+ * It is the same value as `og:url` deliberately. Two tags claiming different
+ * canonical URLs for one document is worse than either alone.
+ */
+function upsertCanonical(href) {
+  const existing = document.head.querySelector('link[rel="canonical"]');
+  if (!href) {
+    if (existing) existing.remove();
+    return;
+  }
+  const tag = existing || document.head.appendChild(document.createElement("link"));
+  tag.setAttribute("rel", "canonical");
+  tag.setAttribute("href", href);
+}
+
+/**
+ * Sets the title, description, canonical, Open Graph and Twitter meta for a route.
  *
  * EVERY route must call this, the home page included. This is one document that
  * never reloads, so a route that sets nothing keeps whatever the previous route
@@ -82,7 +102,9 @@ export function usePageMeta({ title, description, robots } = {}) {
     upsertMeta("property", "og:site_name", SITE_NAME);
     upsertMeta("name", "twitter:card", SITE_ORIGIN && SHARE_IMAGE ? "summary_large_image" : "summary");
 
-    upsertMeta("property", "og:url", SITE_ORIGIN ? `${SITE_ORIGIN}${window.location.pathname}` : "");
+    const canonical = SITE_ORIGIN ? `${SITE_ORIGIN}${window.location.pathname}` : "";
+    upsertMeta("property", "og:url", canonical);
+    upsertCanonical(canonical);
 
     const image = SITE_ORIGIN && SHARE_IMAGE ? `${SITE_ORIGIN}${SHARE_IMAGE}` : "";
     upsertMeta("property", "og:image", image);

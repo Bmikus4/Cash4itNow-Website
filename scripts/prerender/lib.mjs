@@ -12,12 +12,82 @@
  * "/" is a real file and needs no rewrite; "*" is the in-app 404, reached through
  * the terminal catch-all rather than by a route of its own.
  */
-export function routesFromApp(appSource) {
+export function routesFromApp(appSource, expansions = {}) {
   const all = [...appSource.matchAll(/path="([^"]+)"/g)].map((m) => m[1]);
+  const named = all.filter((route) => route !== "*");
   return {
-    static: all.filter((route) => route !== "*" && !route.includes(":")),
-    dynamic: all.filter((route) => route.includes(":")),
+    static: named.flatMap((route) =>
+      route.includes(":") ? expansions[route] ?? [] : [route]
+    ),
+    dynamic: named.filter((route) => route.includes(":") && !expansions[route]),
   };
+}
+
+/**
+ * `/blog/:slug` is a parameterised route whose complete slug list is known at
+ * build time, because it comes from src/content/posts.js rather than from a
+ * feed. Expanding it here is what lets the posts be gated, rewritten,
+ * prerendered and listed in the sitemap exactly like a hand-written route,
+ * without a second list of posts existing anywhere.
+ *
+ * `/sale/:slug` is deliberately NOT expandable: its slugs come from the sales
+ * API, which needs a database, so it stays dynamic and the crawl skips it.
+ * That is the difference this function encodes — known at build time versus
+ * known only at runtime.
+ */
+export function postExpansions(posts) {
+  return { "/blog/:slug": posts.map((post) => `/blog/${post.slug}`) };
+}
+
+/**
+ * Routes that must stay out of the sitemap, read from the page components
+ * themselves rather than from a list kept alongside them.
+ *
+ * A hand-kept list of noindex routes is the same one-thing-two-representations
+ * defect as a hand-kept sitemap: /favorites would keep its noindex meta while
+ * quietly reappearing in the sitemap, which asks every crawler to fetch a URL we
+ * then tell it to drop. Following App.jsx's own element -> import -> file chain
+ * means the declaration in the component is the only declaration.
+ *
+ * `readSource` takes an import specifier as written in App.jsx and returns the
+ * file's text, or null. Injected so this stays pure and testable.
+ *
+ * DELIBERATELY COARSE: it asks whether a component mentions a noindex robots
+ * value anywhere, not whether the branch that renders for a given URL does. So
+ * `/blog/:slug` reads as noindex because BlogPost noindexes its unknown-slug
+ * branch. That costs nothing today — the sitemap lists the EXPANDED
+ * `/blog/<slug>` routes, which are different strings — and erring toward
+ * excluding is the safe direction: a page wrongly left out of a sitemap is still
+ * crawled through the site's own links, while a page wrongly listed is a URL we
+ * asked Google to fetch and then told it to drop.
+ */
+export function noindexRoutes(appSource, readSource) {
+  const imports = new Map(
+    [...appSource.matchAll(/import\s+(\w+)\s+from\s+["']([^"']+)["']/g)].map((m) => [m[1], m[2]])
+  );
+  const noindex = [];
+  for (const [, route, component] of appSource.matchAll(/path="([^"]+)"\s+element=\{<(\w+)/g)) {
+    const source = imports.has(component) ? readSource(imports.get(component)) : null;
+    if (source && /robots:\s*["'][^"']*noindex/.test(source)) noindex.push(route);
+  }
+  return noindex;
+}
+
+/**
+ * The sitemap, generated from the same expanded route list the gate and the
+ * crawl use. Nothing here is hand-maintained.
+ *
+ * No `lastmod`: it would have to come from either a build clock — which breaks
+ * the byte-identical guarantee the crawl was fixed to hold — or a per-route date
+ * that only the posts have. An absent lastmod is valid and cannot be wrong,
+ * which is worth more than a field crawlers treat as a hint.
+ */
+export function sitemapXml(origin, routes) {
+  const urls = [...routes]
+    .sort()
+    .map((route) => `  <url><loc>${origin}${route === "/" ? "/" : route}</loc></url>`)
+    .join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
 
 /**

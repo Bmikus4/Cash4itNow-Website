@@ -3,6 +3,8 @@ import fs from 'node:fs'
 import path from 'path'
 import { defineConfig } from 'vite'
 import { resolveOrigins } from './src/lib/origins.js'
+import { POSTS } from './src/content/posts.js'
+import { noindexRoutes, postExpansions, routesFromApp, sitemapXml } from './scripts/prerender/lib.mjs'
 
 /**
  * Fails the build if vercel.json's `connect-src` does not allow every origin the
@@ -160,9 +162,12 @@ function spaRoutesAreRewritten() {
           .map((rule) => rule.source)
       )
 
-      // "*" is the in-app 404, not a URL to rewrite. React Router's /sale/:slug
-      // and Vercel's /sale/:slug spell params alike.
-      const routes = [...app.matchAll(/path="([^"]+)"/g)].map((m) => m[1]).filter((route) => route !== '*')
+      // Derived by the SAME function the prerender crawl uses, so the gate and
+      // the crawl cannot disagree about what a route is. It drops the in-app
+      // "*", expands /blog/:slug into one route per post, and leaves /sale/:slug
+      // parameterised — React Router and Vercel spell params alike.
+      const { static: staticRoutes, dynamic } = routesFromApp(app, postExpansions(POSTS))
+      const routes = [...staticRoutes, ...dynamic]
       const missing = routes.filter((route) => !covering.has(route))
       if (missing.length) {
         this.error(
@@ -180,10 +185,60 @@ function spaRoutesAreRewritten() {
   }
 }
 
+/**
+ * Writes dist/sitemap.xml from the same route source as everything else.
+ *
+ * §8.3 asks for a sitemap, and the blog is what makes it earn its place — five
+ * new URLs that nothing else announces. It is GENERATED rather than written
+ * because a hand-maintained sitemap is the one-thing-two-representations defect
+ * with an .xml extension: it goes stale silently, and a stale sitemap is worse
+ * than none, since it asks crawlers to fetch URLs that no longer exist while
+ * omitting the ones that do.
+ *
+ * Noindex routes are excluded, read from the page components themselves — see
+ * noindexRoutes(). Listing /favorites would ask a crawler to fetch a URL the
+ * page then tells it to drop.
+ *
+ * `scripts/check-sitemap.mjs` re-derives the expected set after the build and
+ * fails if the file disagrees, so this is checked rather than eyeballed.
+ */
+function sitemapFromRoutes() {
+  return {
+    name: 'sitemap-from-routes',
+    apply: 'build',
+    closeBundle() {
+      const src = path.resolve(__dirname, 'src')
+      const readSource = (specifier) => {
+        for (const ext of ['', '.jsx', '.js']) {
+          const file = path.resolve(src, `${specifier.replace(/^\.\//, '')}${ext}`)
+          if (fs.existsSync(file) && fs.statSync(file).isFile()) return fs.readFileSync(file, 'utf8')
+        }
+        return null
+      }
+
+      const app = fs.readFileSync(path.join(src, 'App.jsx'), 'utf8')
+      const { static: staticRoutes } = routesFromApp(app, postExpansions(POSTS))
+      const excluded = new Set(noindexRoutes(app, readSource))
+      const listed = staticRoutes.filter((route) => !excluded.has(route))
+
+      const dist = path.resolve(__dirname, 'dist')
+      if (!fs.existsSync(dist)) return
+      fs.writeFileSync(path.join(dist, 'sitemap.xml'), sitemapXml(resolveOrigins(process.env).site, listed))
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   logLevel: 'error',
-  plugins: [react(), cspMatchesOrigins(), noStrayOriginLiterals(), shareImageIsReachable(), spaRoutesAreRewritten()],
+  plugins: [
+    react(),
+    cspMatchesOrigins(),
+    noStrayOriginLiterals(),
+    shareImageIsReachable(),
+    spaRoutesAreRewritten(),
+    sitemapFromRoutes(),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -14,6 +14,8 @@ import Contact from './pages/Contact';
 import ForSale from './pages/ForSale';
 import ForProfessionals from './pages/ForProfessionals';
 import SalePage from './pages/SalePage';
+import BlogIndex from './pages/BlogIndex';
+import BlogPost from './pages/BlogPost';
 
 // Every route here is public. There is no sign-in and no admin surface on the
 // website — the tool is the admin — so there is nothing to gate and nothing to
@@ -32,6 +34,12 @@ function App() {
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/for-sale" element={<ForSale />} />
                 <Route path="/for-professionals" element={<ForProfessionals />} />
+                <Route path="/blog" element={<BlogIndex />} />
+                {/* Parameterised, but unlike /sale/:slug its complete slug list
+                    is known at build time from src/content/posts.js — so the
+                    route gate, vercel.json, the prerender crawl and the sitemap
+                    all expand it into one route per post. See postExpansions(). */}
+                <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/sale/:slug" element={<SalePage />} />
                 <Route path="/favorites" element={<Favorites />} />
                 {/* Inside the layout: a 404 outside it is a dead end with no

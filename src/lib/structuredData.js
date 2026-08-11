@@ -78,6 +78,57 @@ export function webSiteGraph() {
   };
 }
 
+/**
+ * One answer page, per §8.3's "Article on every post".
+ *
+ * `author` is the business, by reference to the LocalBusiness graph — NOT a
+ * person. Naming a writer we have not confirmed exists would be the same defect
+ * as the testimonials: a claim about a real human made to a machine that treats
+ * it as fact. An organisation as author is both true and a shape consumers
+ * accept, so there is nothing to gain by inventing a byline.
+ *
+ * Dates come from the post's own written-down `published`/`updated` fields
+ * rather than from a clock, so two builds of one commit emit identical bytes.
+ */
+export function articleGraph(post, url) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    headline: post.question,
+    description: post.description,
+    datePublished: post.published,
+    dateModified: post.updated,
+    inLanguage: "en-US",
+    author: { "@id": `${SITE_ORIGIN}/#business` },
+    publisher: { "@id": `${SITE_ORIGIN}/#business` },
+    about: { "@type": "Thing", name: "Estate liquidation" },
+    isPartOf: { "@type": "Blog", "@id": `${SITE_ORIGIN}/blog#blog`, name: `${SITE_NAME} — Answers` },
+  };
+}
+
+/** The index, as a Blog whose posts are listed in the order the page shows them. */
+export function blogGraph(posts, pathFor) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "@id": `${SITE_ORIGIN}/blog#blog`,
+    name: `${SITE_NAME} — Answers`,
+    description: "Straight answers to what executors, families and realtors ask before an estate is cleared.",
+    url: `${SITE_ORIGIN}/blog`,
+    publisher: { "@id": `${SITE_ORIGIN}/#business` },
+    blogPost: posts.map((post) => ({
+      "@type": "BlogPosting",
+      headline: post.question,
+      description: post.description,
+      datePublished: post.published,
+      dateModified: post.updated,
+      url: `${SITE_ORIGIN}${pathFor(post)}`,
+      author: { "@id": `${SITE_ORIGIN}/#business` },
+    })),
+  };
+}
+
 /** `trail` is [{ name, path }] from the home page inward, home included. */
 export function breadcrumbGraph(trail) {
   return {

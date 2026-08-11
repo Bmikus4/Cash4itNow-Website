@@ -8,6 +8,12 @@
     { "source": "/for-sale", "destination": "/for-sale/index.html" },
     { "source": "/for-professionals", "destination": "/for-professionals/index.html" },
     { "source": "/favorites", "destination": "/favorites/index.html" },
+    { "source": "/blog", "destination": "/blog/index.html" },
+    { "source": "/blog/estate-sale-vs-auction-vs-buyout", "destination": "/blog/estate-sale-vs-auction-vs-buyout/index.html" },
+    { "source": "/blog/what-happens-to-what-doesnt-sell", "destination": "/blog/what-happens-to-what-doesnt-sell/index.html" },
+    { "source": "/blog/executors-checklist-clearing-a-parents-home", "destination": "/blog/executors-checklist-clearing-a-parents-home/index.html" },
+    { "source": "/blog/house-listing-ready-after-a-death", "destination": "/blog/house-listing-ready-after-a-death/index.html" },
+    { "source": "/blog/do-i-need-an-appraisal-before-selling", "destination": "/blog/do-i-need-an-appraisal-before-selling/index.html" },
     { "source": "/sale/:slug", "destination": "/index.html" },
     { "source": "/(.*)", "destination": "/404.html" }
   ],
