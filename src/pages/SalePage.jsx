@@ -10,23 +10,7 @@ import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
 import { usePageMeta } from "@/lib/usePageMeta";
 import { useJsonLd, breadcrumbGraph } from "@/lib/structuredData";
 
-/**
- * The catalog's item shape is not pinned by the contract yet, so both of the
- * plausible ones are accepted: a bare image URL, or an object carrying one.
- * Anything else is skipped rather than rendered as a broken tile.
- */
-function catalogEntries(catalog) {
-  if (!Array.isArray(catalog)) return [];
-  return catalog
-    .map((entry) => {
-      if (typeof entry === "string") return { imageUrl: entry, title: "" };
-      if (entry && typeof entry === "object" && entry.imageUrl) {
-        return { imageUrl: entry.imageUrl, title: entry.title || "" };
-      }
-      return null;
-    })
-    .filter(Boolean);
-}
+import { readCatalog, CATALOG_ABSENT, CATALOG_EMPTY, CATALOG_PENDING } from "@/api/catalogChannel";
 
 export default function SalePage() {
   const { slug } = useParams();
@@ -83,7 +67,7 @@ export default function SalePage() {
     );
   }
 
-  const photos = catalogEntries(sale.catalog);
+  const catalog = readCatalog(sale.catalog);
 
   return (
     <div className="min-h-screen bg-background">
@@ -152,32 +136,64 @@ export default function SalePage() {
           </motion.section>
         )}
 
-        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <h2 className="font-heading font-black text-2xl uppercase tracking-tight">Sale Preview Photos</h2>
-          <div className="h-1 bg-accent w-16 mb-8 mt-1" />
-          {photos.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {photos.map((photo, i) => (
-                <figure key={i} className="border-2 border-foreground/10 overflow-hidden group">
-                  <img
-                    src={photo.imageUrl}
-                    alt={photo.title || `${sale.title} preview ${i + 1}`}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  {photo.title && (
-                    <figcaption className="font-heading font-bold text-xs uppercase tracking-widest text-muted-foreground px-3 py-2">
-                      {photo.title}
-                    </figcaption>
-                  )}
-                </figure>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              {isUpcoming ? "No photos yet — check back closer to the sale date." : "No photos from this sale."}
-            </p>
-          )}
-        </motion.section>
+        {/* FOUR STATES, AND THE SECTION IS ABSENT FOR ONE OF THEM.
+
+            When no catalog has been published for this sale, the page says
+            NOTHING — no heading, no apology. The previous version rendered "No
+            photos yet — check back closer to the sale date" here, and because the
+            real feed publishes a reference rather than an array, that sentence
+            was shown for every real sale: a confident claim about photographs
+            that the channel to carry them had never existed to hold. A heading
+            with an apology under it is a worse answer than no section, because it
+            invites a visitor to come back for something nobody has promised.
+
+            Do not "simplify" this back into `photos.length > 0`. That collapse is
+            the F3d defect itself; scripts/check-catalog-states.mjs fails if it
+            returns. */}
+        {catalog.state !== CATALOG_ABSENT && (
+          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <h2 className="font-heading font-black text-2xl uppercase tracking-tight">Sale Preview Photos</h2>
+            <div className="h-1 bg-accent w-16 mb-8 mt-1" />
+
+            {catalog.items.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {catalog.items.map((photo, i) => (
+                  <figure key={photo.id} className="border-2 border-foreground/10 overflow-hidden group">
+                    <img
+                      src={photo.imageUrl}
+                      alt={photo.title || `${sale.title} preview ${i + 1}`}
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    {photo.title && (
+                      <figcaption className="font-heading font-bold text-xs uppercase tracking-widest text-muted-foreground px-3 py-2">
+                        {photo.title}
+                      </figcaption>
+                    )}
+                  </figure>
+                ))}
+              </div>
+            )}
+
+            {/* The feed told us this catalog holds items and did not send them.
+                Saying "no photos" here would state the opposite of what we were
+                just told. The count is printed only when the feed gave one — an
+                unknown count is not zero. */}
+            {catalog.state === CATALOG_PENDING && (
+              <p className="text-muted-foreground text-sm">
+                {catalog.count
+                  ? `${catalog.count} items are catalogued for this sale. The photographs are not published yet — `
+                  : "This sale has a catalogue. The photographs are not published yet — "}
+                {isUpcoming ? "they go up before the doors open." : "get in touch and we will tell you what was in it."}
+              </p>
+            )}
+
+            {catalog.state === CATALOG_EMPTY && (
+              <p className="text-muted-foreground text-sm">
+                {isUpcoming ? "No photos yet — check back closer to the sale date." : "No photos from this sale."}
+              </p>
+            )}
+          </motion.section>
+        )}
       </div>
     </div>
   );
