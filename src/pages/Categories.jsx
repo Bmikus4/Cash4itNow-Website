@@ -3,67 +3,12 @@ import { motion } from "framer-motion";
 import { Phone } from "lucide-react";
 import { usePageMeta } from "@/lib/usePageMeta";
 import { useJsonLd, offerCatalogGraph, breadcrumbGraph } from "@/lib/structuredData";
+import { CATEGORIES, ADDITIONAL_ITEMS } from "@/content/categories";
 
 const ORIGINAL_FLYER = "/img/14dc69cc4_Screenshot_20260524_215817_Facebook.webp";
 
-const categories = [
-  {
-    title: "Records, CDs, Guitars & Music Memorabilia",
-    items: ["Vinyl Records", "CDs", "Electric Guitars", "Acoustic Guitars", "Signed Memorabilia", "Old Cassettes", "Jukeboxes"],
-    image: "https://images.unsplash.com/photo-1603048588665-791ca8aea617?w=800&q=80",
-  },
-  {
-    title: "Tonka, Matchbox, GI Joe, Atari, Nintendo & Pedal Cars",
-    items: ["Tonka Trucks", "Matchbox Cars", "GI Joe", "Atari", "Nintendo", "Pedal Cars", "Steel Toys", "Toy Boats", "Wagons"],
-    collage: true,
-  },
-  {
-    title: "Uniforms, Medals, Military Artifacts & Swords",
-    items: ["Military Uniforms", "Medals", "Swords", "Historical Artifacts", "Cap Guns", "Shell Boxes", "Decoys", "Military Memorabilia"],
-    image: "/img/fddd29a83_generated_image.webp",
-  },
-  {
-    title: "Fine Jewelry & Vintage Costume Jewelry",
-    items: ["Fine Jewelry", "Turquoise Jewelry", "Vintage Costume Jewelry", "Weiss", "Trifari", "Miriam Haskell", "Rhinestone Pieces", "Brooches", "Necklaces"],
-    image: "/img/f3522ea84_generated_image.webp",
-  },
-  {
-    title: "Signs & Advertising",
-    items: ["Advertising Signs", "Old Signs", "Oil Cans", "Pop Bottles"],
-    image: "/img/6414adcb0_Screenshot_20260527_201908_Instagram.webp",
-  },
-  {
-    title: "Sports & Cards",
-    items: ["Old Baseball Cards", "Early Star Wars", "Early Boy Scouts", "Bicycles"],
-    collage6: true,
-  },
-  {
-    title: "Home & Décor",
-    items: ["Pottery", "Crocks", "Jugs", "Old Bowls", "Chairs", "Rugs", "Lamps", "Lighting", "Trunks", "Oil Paintings", "Weathervanes", "Doorstops", "Wagon Wheels", "Griswold Cast Iron"],
-    collage7: true,
-  },
-  {
-    title: "Smoking Pipes & Fountain Pens",
-    items: ["Meerschaum Pipes", "Briar Pipes", "Clay Pipes", "Carved Pipes", "Pipe Stands", "Fountain Pens", "Parker Pens", "Waterman Pens", "Sheaffer Pens", "Montblanc", "Ink Bottles", "Pen Sets"],
-    collage8: true,
-  },
-  {
-    title: "Uranium Glass & Vaseline Glass",
-    items: ["Uranium Glass", "Vaseline Glass", "Depression Glass", "UV Glowing Pieces", "Antique Glassware", "Bowls", "Plates", "Cups", "Figurines"],
-    collage9: true,
-  },
-  {
-    title: "Americana",
-    items: ["American Flags", "Uncle Sam Tins", "Patriotic Eagles", "Route 66 Signs", "Statue of Liberty Souvenirs", "4th of July Decor", "Political Buttons", "Patriotic Ribbons", "Liberty Bells", "Vintage Postcards", "Patriotic Toys", "Presidential Items"],
-    image: "/img/4fd36c129_generated_image.webp",
-  },
-];
-
-const additionalItems = [
-  "Turquoise", "Old Christmas", "Early Halloween", "Religious Items",
-  "Old Fishing Gear", "70s Tech", "Railroad", "Trains", "Cameras",
-  "Taxidermy", "Pinball", "Griswold Cast Iron", "Grocery Items",
-];
+const categories = CATEGORIES;
+const additionalItems = ADDITIONAL_ITEMS;
 
 export default function Categories() {
   usePageMeta({
