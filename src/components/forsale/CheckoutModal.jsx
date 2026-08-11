@@ -7,6 +7,14 @@ import { Button } from "@/components/ui/button";
 import { useLeadForm, CONTACT_PHONE } from "@/api/leadForm";
 import { toast } from "sonner";
 
+// Prefixed, never substituted — see the note in MakeOfferModal. Two inquiries
+// on two items from one phone must not hash the same, and the server dedupes on
+// formId|phone|message without seeing `payload`.
+function inquiryMessage(item, form) {
+  const summary = `Purchase inquiry: "${item.title}" (item ${item.id}, listed $${item.price})`;
+  return form.message ? `${summary}\n\n${form.message}` : summary;
+}
+
 export default function CheckoutModal({ item, onClose }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [sending, setSending] = useState(false);
@@ -25,7 +33,7 @@ export default function CheckoutModal({ item, onClose }) {
       name: form.name,
       email: form.email || undefined,
       phone: form.phone,
-      message: form.message || undefined,
+      message: inquiryMessage(item, form),
       payload: {
         intent: "purchase_inquiry",
         itemId: item.id,

@@ -3,6 +3,23 @@ import { X, Loader2, Handshake } from "lucide-react";
 import { useLeadForm, CONTACT_PHONE } from "@/api/leadForm";
 import { toast } from "sonner";
 
+/**
+ * The message identifies the item, ALWAYS — never only when the visitor leaves
+ * the note blank.
+ *
+ * The server dedupes on formId|phone|message over 24 hours and cannot see
+ * `payload`, so two offers on two different items from one phone hash
+ * identically unless the item is in the message. The second is dropped as a
+ * duplicate and nothing anywhere records it: offer on a dresser, then on a
+ * mirror, and the mirror is gone. A fallback-only version has the same hole for
+ * anyone who types the same note twice, which is why the summary is prefixed
+ * rather than substituted.
+ */
+function offerMessage(item, form) {
+  const summary = `Offer $${form.offer} on "${item.title}" (item ${item.id}, listed $${item.price})`;
+  return form.message ? `${summary}\n\n${form.message}` : summary;
+}
+
 export default function MakeOfferModal({ item, onClose }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", offer: "", message: "" });
   const [submitting, setSubmitting] = useState(false);
@@ -24,7 +41,7 @@ export default function MakeOfferModal({ item, onClose }) {
       name: form.name,
       email: form.email || undefined,
       phone: form.phone || undefined,
-      message: form.message || undefined,
+      message: offerMessage(item, form),
       payload: {
         itemId: item.id,
         itemTitle: item.title,

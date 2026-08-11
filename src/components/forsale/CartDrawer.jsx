@@ -8,6 +8,15 @@ import { Button } from "@/components/ui/button";
 import { useLeadForm, CONTACT_PHONE } from "@/api/leadForm";
 import { toast } from "sonner";
 
+// Prefixed, never substituted — see the note in MakeOfferModal. The cart's
+// contents are what distinguish two inquiries from one phone, and the server
+// dedupes on formId|phone|message without seeing `payload`.
+function cartMessage(cartItems, total, form) {
+  const lines = cartItems.map((i) => `${i.title} - $${Number(i.price).toFixed(2)}`).join("; ");
+  const summary = `Cart inquiry (${cartItems.length} item(s), $${total.toFixed(2)}): ${lines}`;
+  return form.message ? `${summary}\n\n${form.message}` : summary;
+}
+
 export default function CartDrawer({ onClose }) {
   const { cartItems, removeFromCart, clearCart, total } = useCart();
   const [step, setStep] = useState("cart"); // "cart" | "checkout" | "success"
@@ -27,7 +36,7 @@ export default function CartDrawer({ onClose }) {
       name: form.name,
       email: form.email || undefined,
       phone: form.phone,
-      message: form.message || undefined,
+      message: cartMessage(cartItems, total, form),
       payload: {
         intent: "cart_inquiry",
         cartTotal: total,
