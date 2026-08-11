@@ -47,7 +47,11 @@ const MOCK = {
       state: "PA",
       startsAt: new Date(Date.now() + 20 * 86400000).toISOString(),
       endsAt: new Date(Date.now() + 21 * 86400000).toISOString(),
-      catalog: [],
+      // The REFERENCE shape the live feed actually publishes. The mock carried an
+      // array for every sale, which is why F3d was invisible in development for
+      // as long as it was: the one shape production always sends was the one
+      // shape the mock never did.
+      catalog: { slug: "shaler-collector-downsize", itemCount: 40 },
     },
   ],
   past: [
@@ -71,7 +75,8 @@ const MOCK = {
       state: "PA",
       startsAt: new Date(Date.now() - 75 * 86400000).toISOString(),
       endsAt: new Date(Date.now() - 74 * 86400000).toISOString(),
-      catalog: [],
+      // No `catalog` key at all: nothing has been published for this sale. The
+      // page must render no photo section whatsoever, not an apology.
     },
   ],
 };
