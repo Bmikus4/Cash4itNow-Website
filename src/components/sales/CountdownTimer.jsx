@@ -1,15 +1,10 @@
 import React, { useState, useEffect } from "react";
 
-function getRemaining(targetDate, targetTime) {
-  const now = new Date();
-  const target = new Date(targetDate);
-  if (targetTime) {
-    const [h, m] = targetTime.split(":").map(Number);
-    target.setHours(h || 0, m || 0, 0, 0);
-  } else {
-    target.setHours(8, 0, 0, 0);
-  }
-  const diff = target.getTime() - now.getTime();
+// startsAt carries the time of day, so there is nothing to reconstruct here.
+function getRemaining(startsAt) {
+  const target = new Date(startsAt);
+  if (Number.isNaN(target.getTime())) return { invalid: true };
+  const diff = target.getTime() - Date.now();
   if (diff <= 0) return { done: true, days: 0, hours: 0, minutes: 0, seconds: 0 };
   const days = Math.floor(diff / 86400000);
   const hours = Math.floor((diff % 86400000) / 3600000);
@@ -18,13 +13,15 @@ function getRemaining(targetDate, targetTime) {
   return { done: false, days, hours, minutes, seconds };
 }
 
-export default function CountdownTimer({ date, time }) {
-  const [remaining, setRemaining] = useState(() => getRemaining(date, time));
+export default function CountdownTimer({ startsAt }) {
+  const [remaining, setRemaining] = useState(() => getRemaining(startsAt));
 
   useEffect(() => {
-    const interval = setInterval(() => setRemaining(getRemaining(date, time)), 1000);
+    const interval = setInterval(() => setRemaining(getRemaining(startsAt)), 1000);
     return () => clearInterval(interval);
-  }, [date, time]);
+  }, [startsAt]);
+
+  if (remaining.invalid) return null;
 
   if (remaining.done) {
     return (

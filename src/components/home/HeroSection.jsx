@@ -27,9 +27,10 @@ export default function HeroSection() {
   const x = useTransform(springX, [-0.5, 0.5], [-SHIFT_X, SHIFT_X]);
   const y = useTransform(springY, [-0.5, 0.5], [-SHIFT_Y, SHIFT_Y]);
   // The offset block slides against the box, which is what makes it read as
-  // floating rather than as the whole panel sliding.
-  const shadowX = useTransform(springX, [-0.5, 0.5], [18, -18]);
-  const shadowY = useTransform(springY, [-0.5, 0.5], [18, -18]);
+  // floating rather than as the whole panel sliding. The range is biased so it
+  // still sits proud of the box at rest, before the pointer has moved.
+  const shadowX = useTransform(springX, [-0.5, 0.5], [34, -10]);
+  const shadowY = useTransform(springY, [-0.5, 0.5], [34, -10]);
 
   const handlePointerMove = (e) => {
     if (reduceMotion) return;
@@ -160,10 +161,12 @@ export default function HeroSection() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.6 }}
           style={{ x, y }}
-          className="relative w-full max-w-xl h-[55vh] md:h-[68vh] border-4 border-background bg-foreground"
+          className="relative w-full max-w-xl h-[55vh] md:h-[68vh] border-4 border-background"
         >
           {/* Offset block behind the box; it slides opposite the box under the
-              pointer, which is what sells the depth. */}
+              pointer, which is what sells the depth. The box itself must stay
+              transparent — an opaque background on this transformed element
+              would paint over a -z-10 child and the block would never show. */}
           <motion.div
             aria-hidden="true"
             style={{ x: shadowX, y: shadowY }}

@@ -1,26 +1,37 @@
-import React, { useState } from "react";
+import React from "react";
 import { useParams, Link } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
-import { useAuth } from "@/lib/AuthContext";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Calendar, MapPin, ArrowLeft, Plus, Pencil } from "lucide-react";
+import { Calendar, MapPin, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
-import AdminSaleForm from "@/components/sales/AdminSaleForm";
-import SaleRoomGallery from "@/components/sales/SaleRoomGallery";
+import { fetchSales, saleDateRange, saleLocation, SALES_QUERY_KEY } from "@/api/salesClient";
+import CountdownTimer from "@/components/sales/CountdownTimer";
+import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
+
+/**
+ * The catalog's item shape is not pinned by the contract yet, so both of the
+ * plausible ones are accepted: a bare image URL, or an object carrying one.
+ * Anything else is skipped rather than rendered as a broken tile.
+ */
+function catalogEntries(catalog) {
+  if (!Array.isArray(catalog)) return [];
+  return catalog
+    .map((entry) => {
+      if (typeof entry === "string") return { imageUrl: entry, title: "" };
+      if (entry && typeof entry === "object" && entry.imageUrl) {
+        return { imageUrl: entry.imageUrl, title: entry.title || "" };
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
 
 export default function SalePage() {
-  const { id } = useParams();
-  const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
-  const [showForm, setShowForm] = useState(false);
-  const queryClient = useQueryClient();
+  const { slug } = useParams();
+  const { data, isLoading } = useQuery({ queryKey: SALES_QUERY_KEY, queryFn: fetchSales });
 
-  const { data: sale, isLoading } = useQuery({
-    queryKey: ["sale", id],
-    queryFn: () => base44.entities.UpcomingSale.filter({ id }),
-    select: (data) => data[0],
-  });
+  const sale = [...(data?.upcoming ?? []), ...(data?.past ?? [])].find((s) => s.slug === slug);
+  const isUpcoming = (data?.upcoming ?? []).some((s) => s.slug === slug);
 
   if (isLoading) {
     return (
@@ -39,13 +50,7 @@ export default function SalePage() {
     );
   }
 
-  const mapsUrl = sale.address
-    ? `https://www.google.com/maps/embed/v1/place?key=AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY&q=${encodeURIComponent(sale.address)}`
-    : null;
-
-  const directionsUrl = sale.address
-    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(sale.address)}`
-    : null;
+  const photos = catalogEntries(sale.catalog);
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,38 +63,36 @@ export default function SalePage() {
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Home
           </Link>
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-            <div>
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
+            <div className="flex-1">
               <div className="flex items-center gap-2 mb-3">
                 <Calendar className="w-4 h-4 text-accent" />
                 <span className="font-heading text-accent text-sm uppercase tracking-wider font-bold">
-                  {format(new Date(sale.date), "EEEE, MMMM d, yyyy")}
+                  {saleDateRange(sale, format)}
                 </span>
               </div>
               <h1 className="font-heading font-black text-background text-4xl md:text-6xl uppercase tracking-tight leading-[0.9] mb-4">
                 {sale.title}
               </h1>
-              {sale.address && (
+              {saleLocation(sale) && (
                 <div className="flex items-start gap-2 text-background/70">
                   <MapPin className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
-                  <span className="font-body text-sm">{sale.address}</span>
+                  <span className="font-body text-sm">{saleLocation(sale)}</span>
                 </div>
               )}
             </div>
-            {isAdmin && (
-              <button
-                onClick={() => setShowForm(true)}
-                className="flex-shrink-0 inline-flex items-center gap-2 bg-accent text-white font-heading font-black text-xs uppercase tracking-widest px-4 py-3 hover:bg-accent/90 transition-colors"
-              >
-                <Pencil className="w-3.5 h-3.5" /> Edit Sale
-              </button>
+
+            {isUpcoming && (
+              <div className="w-full md:w-72 flex-shrink-0">
+                <CountdownTimer startsAt={sale.startsAt} />
+                <SaleCouponSignup sale={sale} />
+              </div>
             )}
           </div>
         </div>
       </section>
 
       <div className="max-w-5xl mx-auto px-6 md:px-10 py-12 space-y-14">
-        {/* Description */}
         {sale.description && (
           <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <h2 className="font-heading font-black text-2xl uppercase tracking-tight mb-1">About This Sale</h2>
@@ -98,58 +101,51 @@ export default function SalePage() {
           </motion.section>
         )}
 
-        {/* Map */}
-        {sale.address && (
+        {/* The street address is released 48 hours ahead, so the page says so
+            rather than leaving a visitor hunting for a location block. */}
+        {isUpcoming && (
           <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <h2 className="font-heading font-black text-2xl uppercase tracking-tight mb-1">Location</h2>
             <div className="h-1 bg-accent w-16 mb-5" />
-            <div className="border-2 border-foreground overflow-hidden">
-              <iframe
-                title="Sale Location"
-                width="100%"
-                height="380"
-                style={{ border: 0 }}
-                loading="lazy"
-                allowFullScreen
-                src={mapsUrl}
-              />
+            <div className="border-2 border-foreground p-6">
+              <p className="font-heading font-black text-foreground text-xl uppercase tracking-tight mb-2">
+                {saleLocation(sale) || "Pittsburgh area"}
+              </p>
+              <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl">
+                The full street address goes out 48 hours before the doors open. Leave your number above and we'll
+                text it to you along with your coupon.
+              </p>
             </div>
-            <a
-              href={directionsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 mt-4 bg-foreground text-background font-heading font-black text-sm uppercase tracking-widest px-6 py-3 hover:bg-accent transition-colors"
-            >
-              <MapPin className="w-4 h-4" /> Get Directions
-            </a>
           </motion.section>
         )}
 
-        {/* Room Photos */}
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="font-heading font-black text-2xl uppercase tracking-tight">Sale Preview Photos</h2>
-          </div>
-          <div className="h-1 bg-accent w-16 mb-8" />
-          {sale.rooms && sale.rooms.length > 0 ? (
-            <SaleRoomGallery rooms={sale.rooms} />
+          <h2 className="font-heading font-black text-2xl uppercase tracking-tight">Sale Preview Photos</h2>
+          <div className="h-1 bg-accent w-16 mb-8 mt-1" />
+          {photos.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {photos.map((photo, i) => (
+                <figure key={i} className="border-2 border-foreground/10 overflow-hidden group">
+                  <img
+                    src={photo.imageUrl}
+                    alt={photo.title || `${sale.title} preview ${i + 1}`}
+                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  {photo.title && (
+                    <figcaption className="font-heading font-bold text-xs uppercase tracking-widest text-muted-foreground px-3 py-2">
+                      {photo.title}
+                    </figcaption>
+                  )}
+                </figure>
+              ))}
+            </div>
           ) : (
-            <p className="text-muted-foreground text-sm">No photos yet — check back closer to the sale date.</p>
+            <p className="text-muted-foreground text-sm">
+              {isUpcoming ? "No photos yet — check back closer to the sale date." : "No photos from this sale."}
+            </p>
           )}
         </motion.section>
       </div>
-
-      {showForm && (
-        <AdminSaleForm
-          sale={sale}
-          onClose={() => setShowForm(false)}
-          onSaved={() => {
-            queryClient.invalidateQueries({ queryKey: ["sale", id] });
-            queryClient.invalidateQueries({ queryKey: ["upcoming-sales"] });
-            setShowForm(false);
-          }}
-        />
-      )}
     </div>
   );
 }
