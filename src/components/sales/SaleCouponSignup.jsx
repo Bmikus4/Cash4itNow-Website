@@ -2,6 +2,26 @@ import React, { useState } from "react";
 import { MessageSquare, Loader2, Check } from "lucide-react";
 import { useLeadForm } from "@/api/leadForm";
 
+/**
+ * The message names the sale, always.
+ *
+ * The server dedupes on formId|phone|message over 24 hours and cannot see
+ * `payload`, where the sale identity used to live alone. One phone signing up
+ * for two different sales in a day therefore sent sale_coupon, the same phone
+ * and two empty messages: identical hash, second dropped, no row. Coupon
+ * issuance reads that row, so the visitor simply never receives the coupon they
+ * asked for.
+ *
+ * This form has no free-text field, so there is nothing of the visitor's to
+ * append here. If one is ever added, append it to this summary rather than
+ * replacing it — a message that only names the sale when the note is empty
+ * collides again for two people who type the same thing.
+ */
+function couponMessage(sale) {
+  const identity = sale.slug || sale.startsAt || sale.date || "unscheduled";
+  return `Coupon signup for "${sale.title}" (${identity})`;
+}
+
 export default function SaleCouponSignup({ sale }) {
   const [phone, setPhone] = useState("");
   const [sending, setSending] = useState(false);
@@ -15,6 +35,7 @@ export default function SaleCouponSignup({ sale }) {
     setSending(true);
     const result = await submit("sale_coupon", {
       phone: phone.trim(),
+      message: couponMessage(sale),
       payload: {
         saleTitle: sale.title,
         saleSlug: sale.slug || undefined,
