@@ -127,7 +127,7 @@ export default function MakeOfferModal({ item, onClose }) {
             </div>
           </div>
           <p className="text-muted-foreground text-xs">
-            Give us a phone number or an email * — whichever you prefer. We cannot reply to an
+            Give us a phone number or an email — whichever you prefer. We cannot reply to an
             offer without one.
           </p>
 
