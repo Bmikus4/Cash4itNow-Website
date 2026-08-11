@@ -47,6 +47,50 @@ function cspMatchesOrigins() {
 }
 
 /**
+ * Fails the build if any file under src/ writes a platform origin as a literal.
+ *
+ * The CSP check below validates the ORIGINS MODULE against vercel.json, so a
+ * literal elsewhere is invisible to it: move VITE_API_ORIGIN and the checked
+ * origin moves while the literal stays behind, pointing requests at a host the
+ * CSP no longer allows — and the build passes. A green build proving nothing.
+ * src/lib/origins.js is the only file allowed to spell an origin out.
+ */
+function noStrayOriginLiterals() {
+  return {
+    name: 'no-stray-origin-literals',
+    apply: 'build',
+    buildStart() {
+      const { api, site } = resolveOrigins(process.env)
+      const allowed = path.resolve(__dirname, 'src/lib/origins.js')
+      const offenders = []
+      const walk = (dir) => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const full = path.join(dir, entry.name)
+          if (entry.isDirectory()) walk(full)
+          else if (/\.(js|jsx|ts|tsx)$/.test(entry.name) && full !== allowed) {
+            const text = fs.readFileSync(full, 'utf8')
+            // Comments may name an origin; code may not. Strip line comments and
+            // block comments before looking.
+            const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+            for (const origin of [api, site]) {
+              if (code.includes(origin)) offenders.push(`${path.relative(__dirname, full)} (${origin})`)
+            }
+          }
+        }
+      }
+      walk(path.resolve(__dirname, 'src'))
+      if (offenders.length) {
+        this.error(
+          `Origin literals outside src/lib/origins.js: ${offenders.join(', ')}. ` +
+            'Import resolveOrigins instead — a literal here survives a change to ' +
+            'VITE_API_ORIGIN and sends requests to a host the CSP does not allow.'
+        )
+      }
+    },
+  }
+}
+
+/**
  * Fails the build if index.html's static og:image is not an absolute URL on the
  * canonical origin, or if the file it names is not in public/.
  *
@@ -106,13 +150,19 @@ function spaRoutesAreRewritten() {
     buildStart() {
       const app = fs.readFileSync(path.resolve(__dirname, 'src/App.jsx'), 'utf8')
       const config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'vercel.json'), 'utf8'))
+      // A route is covered by a rewrite to the shell (client-rendered) OR to its
+      // own prerendered snapshot. Both are valid; the terminal /(.*) rule points
+      // at /404.html and must never read as coverage, or the gate would pass for
+      // every missing route the moment a catch-all existed.
       const covering = new Set(
-        (config.rewrites ?? []).filter((rule) => rule.destination === '/index.html').map((rule) => rule.source)
+        (config.rewrites ?? [])
+          .filter((rule) => rule.destination === '/index.html' || /^\/[\w./-]+\/index\.html$/.test(rule.destination))
+          .map((rule) => rule.source)
       )
 
-      // "/" is served as a real file; "*" is the in-app 404, not a URL to rewrite.
-      // React Router's /sale/:slug and Vercel's /sale/:slug spell params alike.
-      const routes = [...app.matchAll(/path="([^"]+)"/g)].map((m) => m[1]).filter((route) => route !== '/' && route !== '*')
+      // "*" is the in-app 404, not a URL to rewrite. React Router's /sale/:slug
+      // and Vercel's /sale/:slug spell params alike.
+      const routes = [...app.matchAll(/path="([^"]+)"/g)].map((m) => m[1]).filter((route) => route !== '*')
       const missing = routes.filter((route) => !covering.has(route))
       if (missing.length) {
         this.error(
@@ -133,7 +183,7 @@ function spaRoutesAreRewritten() {
 // https://vite.dev/config/
 export default defineConfig({
   logLevel: 'error',
-  plugins: [react(), cspMatchesOrigins(), shareImageIsReachable(), spaRoutesAreRewritten()],
+  plugins: [react(), cspMatchesOrigins(), noStrayOriginLiterals(), shareImageIsReachable(), spaRoutesAreRewritten()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

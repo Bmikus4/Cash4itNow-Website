@@ -40,11 +40,19 @@ export interface SubmitOptions {
   signal?: AbortSignal;
 }
 
+import { resolveOrigins } from '@/lib/origins';
+
 export type SubmitResult =
   | { ok: true; message: string }
   | { ok: false; message: string; retryable: boolean; fieldErrors?: Record<string, string[]> };
 
-const DEFAULT_ENDPOINT = 'https://cash4itnow.vercel.app/api/public/lead';
+// Resolved from src/lib/origins.js, never written out here. A literal in this
+// file survives a change to VITE_API_ORIGIN: the build-time CSP check validates
+// the module, so moving the origin would leave this pointing at a host the CSP no
+// longer allows — and the build would pass. That is the CSP defect recurring
+// through the hole the module exists to close. The gate in vite.config.js now
+// fails on any platform-origin literal under src/ outside that module.
+const DEFAULT_ENDPOINT = resolveOrigins(import.meta.env).leadEndpoint;
 
 export function startLeadTimer(): number {
   return Date.now();
