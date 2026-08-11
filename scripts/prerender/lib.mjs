@@ -78,7 +78,14 @@ export function countHiddenSections(html) {
  * reason and for no styling purpose.
  */
 export function stripNondeterminism(html) {
-  return html.replace(/(<span[^>]*data-countdown-value[^>]*>)[^<]*(<\/span>)/g, "$1$2");
+  return (
+    html
+      .replace(/(<span[^>]*data-countdown-value[^>]*>)[^<]*(<\/span>)/g, "$1$2")
+      // Infinite framer-motion animations never settle, so their inline transform
+      // is whatever the capture instant caught. Dropping the style attribute is
+      // safe: the animation reapplies it on mount, and the element is decorative.
+      .replace(/(<div[^>]*data-loop-animation[^>]*?)\s*style="[^"]*"/g, "$1")
+  );
 }
 
 /** What the build log must say when a route is not snapshotted, and why. */

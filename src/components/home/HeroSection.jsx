@@ -186,7 +186,14 @@ export default function HeroSection() {
         </motion.div>
       </div>
 
+      {/* data-loop-animation: this never settles, so framer-motion rewrites its
+          inline transform every frame and a snapshot captures whichever value the
+          capture happened to land on. The prerender crawl strips the style
+          attribute of anything carrying this, which is what makes two builds of
+          one commit byte-identical. Any other infinite animation needs the same
+          attribute. */}
       <motion.div
+        data-loop-animation
         className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 pointer-events-none"
         animate={{ y: [0, 8, 0] }}
         transition={{ duration: 2, repeat: Infinity }}
