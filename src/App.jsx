@@ -12,6 +12,7 @@ import Categories from './pages/Categories';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import ForSale from './pages/ForSale';
+import ForProfessionals from './pages/ForProfessionals';
 import SalePage from './pages/SalePage';
 
 // Every route here is public. There is no sign-in and no admin surface on the
@@ -30,6 +31,7 @@ function App() {
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/for-sale" element={<ForSale />} />
+                <Route path="/for-professionals" element={<ForProfessionals />} />
                 <Route path="/sale/:slug" element={<SalePage />} />
                 <Route path="/favorites" element={<Favorites />} />
                 {/* Inside the layout: a 404 outside it is a dead end with no

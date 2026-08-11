@@ -6,6 +6,7 @@
     { "source": "/about", "destination": "/about/index.html" },
     { "source": "/contact", "destination": "/contact/index.html" },
     { "source": "/for-sale", "destination": "/for-sale/index.html" },
+    { "source": "/for-professionals", "destination": "/for-professionals/index.html" },
     { "source": "/favorites", "destination": "/favorites/index.html" },
     { "source": "/sale/:slug", "destination": "/index.html" },
     { "source": "/(.*)", "destination": "/404.html" }
