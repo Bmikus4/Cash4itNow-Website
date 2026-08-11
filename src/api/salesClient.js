@@ -11,8 +11,11 @@
  * they share a react-query key so the page is fetched once.
  */
 
-const DEFAULT_ENDPOINT = "https://cash4itnow.vercel.app/api/public/sales";
-const ENDPOINT = import.meta.env.VITE_SALES_ENDPOINT || DEFAULT_ENDPOINT;
+import { resolveOrigins } from "@/lib/origins";
+
+// The origin comes from src/lib/origins.js and nowhere else: a second copy of it
+// is what let the CSP and the actual request target drift apart.
+const ENDPOINT = import.meta.env.VITE_SALES_ENDPOINT || resolveOrigins(import.meta.env).salesEndpoint;
 const USE_MOCK = import.meta.env.VITE_SALES_MOCK === "1";
 
 export const SALES_QUERY_KEY = ["public-sales"];

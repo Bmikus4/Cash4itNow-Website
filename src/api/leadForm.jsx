@@ -1,5 +1,6 @@
 import React, { useCallback, useId, useRef, useState } from "react";
 import { startLeadTimer, submitLead } from "@/api/leadClient";
+import { resolveOrigins } from "@/lib/origins";
 
 export const CONTACT_PHONE = "412-969-7757";
 export const CONTACT_PHONE_HREF = "tel:4129697757";
@@ -16,7 +17,11 @@ const HONEYPOT_WRAPPER_STYLE = {
   overflow: "hidden",
 };
 
-const ENDPOINT = import.meta.env.VITE_LEAD_ENDPOINT || undefined;
+// Always explicit, never undefined. leadClient.ts carries its own default and is
+// a verbatim copy of the platform's file — editing it there would be reverted by
+// the next re-copy, restoring the second hardcoded origin — so the endpoint is
+// resolved here, from src/lib/origins.js, and its default is never reached.
+const ENDPOINT = import.meta.env.VITE_LEAD_ENDPOINT || resolveOrigins(import.meta.env).leadEndpoint;
 
 /**
  * Everything a form needs to speak the lead contract: the mount timestamp, the
