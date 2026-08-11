@@ -69,10 +69,11 @@ export default function Categories() {
       {/* Header with original flyer */}
       <section className="bg-foreground">
         <div className="relative h-40 md:h-52 overflow-hidden">
-          <img src={ORIGINAL_FLYER} alt="Items we buy" className="w-full h-full object-cover object-top opacity-40" />
+          {/* Centred, not object-top: the flyer is a phone screenshot, and the
+              top of it is the phone's own status bar — clock, wifi, battery —
+              which reads as site chrome at this crop height. */}
+          <img src={ORIGINAL_FLYER} alt="Items we buy" className="w-full h-full object-cover object-center opacity-40" />
           <div className="absolute inset-0 bg-foreground/60" />
-          <div className="absolute inset-0 flex items-end px-6 md:px-10 pb-0 max-w-7xl mx-auto">
-          </div>
         </div>
         <div className="max-w-7xl mx-auto px-6 md:px-10 py-10">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>

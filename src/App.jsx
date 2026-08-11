@@ -32,8 +32,11 @@ function App() {
                 <Route path="/for-sale" element={<ForSale />} />
                 <Route path="/sale/:slug" element={<SalePage />} />
                 <Route path="/favorites" element={<Favorites />} />
+                {/* Inside the layout: a 404 outside it is a dead end with no
+                    nav, which is what a mistyped URL or a stale link off a
+                    Facebook post lands on. */}
+                <Route path="*" element={<PageNotFound />} />
               </Route>
-              <Route path="*" element={<PageNotFound />} />
             </Routes>
           </Router>
           <Toaster />

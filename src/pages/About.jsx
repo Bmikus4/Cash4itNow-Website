@@ -24,7 +24,7 @@ export default function About() {
         <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-10">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}>
             <div className="inline-flex items-center gap-2 bg-accent text-white px-4 py-2 mb-6">
-              <span className="font-heading font-bold text-sm uppercase tracking-widest">🇺🇸 Veteran-Owned Business</span>
+              <span className="font-heading font-bold text-sm uppercase tracking-widest">Veteran-Owned Business</span>
             </div>
             <h1 className="font-heading font-black text-background text-5xl md:text-7xl uppercase tracking-tight leading-[0.9] mb-4">
               Our Story

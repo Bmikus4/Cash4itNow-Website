@@ -72,11 +72,14 @@ export default function BeforeAfterSlider({
         style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
       />
 
-      {/* Corner labels */}
-      <span className="absolute top-4 left-4 bg-foreground/80 text-background text-xs font-heading font-bold uppercase tracking-widest px-3 py-1.5 pointer-events-none">
+      {/* Corner labels sit along the bottom, not the top: the hero mounts this
+          slider inside a box carrying a 90px decorative corner in the top right,
+          and a top-right label lands entirely inside it — red on red, with the
+          text clipped by the diagonal. */}
+      <span className="absolute bottom-4 left-4 bg-foreground/80 text-background text-xs font-heading font-bold uppercase tracking-widest px-3 py-1.5 pointer-events-none">
         {beforeLabel}
       </span>
-      <span className="absolute top-4 right-4 bg-accent text-white text-xs font-heading font-bold uppercase tracking-widest px-3 py-1.5 pointer-events-none">
+      <span className="absolute bottom-4 right-4 bg-accent text-white text-xs font-heading font-bold uppercase tracking-widest px-3 py-1.5 pointer-events-none">
         {afterLabel}
       </span>
 
