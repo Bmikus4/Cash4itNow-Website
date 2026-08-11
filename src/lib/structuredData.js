@@ -13,12 +13,17 @@ const SITE_NAME = "Cash 4 It Now";
  * serving both pages' structured data at once, and a crawler executing JS reads
  * a document claiming to be two things.
  *
- * NOTHING HERE MAY EMIT Review OR AggregateRating. The homepage testimonials are
- * hardcoded strings; publishing them as ratings tells Google they are collected
- * reviews from real, attributable people, which is a claim about the truth made
- * to a third party rather than a formatting choice. That claim is Ben's to make
- * and nobody else's. Do not add it, and do not leave it here commented out
- * waiting to be switched on.
+ * THE TESTIMONIALS MUST NEVER BECOME MACHINE-READABLE, IN ANY FORM. Not Review,
+ * not AggregateRating, not a bare `author` or `reviewer`, and not as microdata or
+ * RDFa attributes on the page either. This is settled permanently, not deferred:
+ * asked directly, Ben confirmed the quotes are not real and are copy only.
+ * Publishing them as data would state to a third party that they are collected
+ * reviews from real people, which would be false. Do not add it, and do not
+ * leave it commented out waiting to be switched on.
+ *
+ * Separately and equally binding: that page copy is not ours to edit, remove,
+ * soften or annotate. The scope here is only that it never leaves the site as
+ * data.
  */
 export function useJsonLd(id, data) {
   const json = data ? JSON.stringify(data) : "";

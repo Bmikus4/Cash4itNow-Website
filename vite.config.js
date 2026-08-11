@@ -46,10 +46,46 @@ function cspMatchesOrigins() {
   }
 }
 
+/**
+ * Fails the build if index.html's static og:image is not an absolute URL on the
+ * canonical origin, or if the file it names is not in public/.
+ *
+ * index.html cannot import a module, so its absolute URL is a second copy of the
+ * origin — the same shape of duplication that caused the CSP defect. This is the
+ * coupling. The missing-file half matters just as much: a scraper caches what it
+ * fetched, so an og:image that 404s leaves a broken share preview standing for
+ * weeks after the URL is corrected.
+ */
+function shareImageIsReachable() {
+  return {
+    name: 'share-image-is-reachable',
+    apply: 'build',
+    buildStart() {
+      const html = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf8')
+      const url = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/)?.[1]
+      if (!url) return // No static og:image is a valid choice; a wrong one is not.
+
+      const { site } = resolveOrigins(process.env)
+      if (!url.startsWith(`${site}/`)) {
+        this.error(
+          `index.html og:image is "${url}" but the canonical origin is "${site}". ` +
+            'A share preview on the wrong origin is cached by scrapers. ' +
+            'Update index.html, or correct src/lib/origins.js.'
+        )
+      }
+
+      const file = path.resolve(__dirname, 'public', url.slice(site.length + 1))
+      if (!fs.existsSync(file)) {
+        this.error(`index.html og:image names ${url}, but ${file} does not exist. Every share would preview a 404.`)
+      }
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   logLevel: 'error',
-  plugins: [react(), cspMatchesOrigins()],
+  plugins: [react(), cspMatchesOrigins(), shareImageIsReachable()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

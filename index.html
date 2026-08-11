@@ -8,15 +8,25 @@
     <title>Cash 4 It Now — Veteran-Owned Estate Liquidators</title>
 
     <!-- Static share defaults, so a share scraped before the app runs is not
-         bare. usePageMeta replaces these per route once it mounts. og:url and
-         og:image are deliberately absent: both need an absolute URL and the
-         production domain is not settled — see SITE_ORIGIN in
-         src/lib/usePageMeta.js, which is the one place to fill in. -->
+         bare — and the scrapers that matter do not run JS at all, which is why
+         og:image lives here as well as in usePageMeta.
+
+         og:url is deliberately NOT here: a static one would point every shared
+         path at the homepage, and a scraper with no og:url uses the URL it was
+         given. usePageMeta sets the per-route one for anything that runs JS.
+
+         The absolute origin below is the second copy in the repo, and
+         vite.config.js fails the build if it stops matching src/lib/origins.js
+         or if share.jpg goes missing. -->
     <meta property="og:title" content="Cash 4 It Now — Veteran-Owned Estate Liquidators" />
     <meta property="og:description" content="Cash 4 It Now — veteran-owned estate liquidation and full estate cleanout services in Pittsburgh, PA." />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Cash 4 It Now" />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content="https://www.cash4itnow.com/share.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Cash 4 It Now Estate Liquidators, veteran-owned, 412-969-7757, with before and after photographs of an estate cleanout" />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <div id="root"></div>
