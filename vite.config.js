@@ -82,10 +82,58 @@ function shareImageIsReachable() {
   }
 }
 
+/**
+ * The route list now lives in two places — `src/App.jsx` and `vercel.json`'s
+ * rewrites — and a route added to one but not the other works perfectly in dev
+ * and 404s in production, with nothing failing loudly in between. That is the
+ * same silent second source of truth that produced the CSP defect. This gate is
+ * the coupling.
+ *
+ * Only rewrites whose destination is `/index.html` count as covering a route.
+ * The terminal `/(.*)` rule points at `/404.html` and must NOT be mistaken for
+ * coverage, or the gate would pass for every missing route the moment a
+ * catch-all exists — which is exactly the hole it is here to close.
+ *
+ * `closeBundle` writes `dist/404.html` as a byte copy of `dist/index.html`: it
+ * is the destination of that terminal rule, so an unknown URL still gets the
+ * real application and React still renders the branded PageNotFound. A copy
+ * cannot drift from the app the way a second hand-built page would.
+ */
+function spaRoutesAreRewritten() {
+  return {
+    name: 'spa-routes-are-rewritten',
+    apply: 'build',
+    buildStart() {
+      const app = fs.readFileSync(path.resolve(__dirname, 'src/App.jsx'), 'utf8')
+      const config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'vercel.json'), 'utf8'))
+      const covering = new Set(
+        (config.rewrites ?? []).filter((rule) => rule.destination === '/index.html').map((rule) => rule.source)
+      )
+
+      // "/" is served as a real file; "*" is the in-app 404, not a URL to rewrite.
+      // React Router's /sale/:slug and Vercel's /sale/:slug spell params alike.
+      const routes = [...app.matchAll(/path="([^"]+)"/g)].map((m) => m[1]).filter((route) => route !== '/' && route !== '*')
+      const missing = routes.filter((route) => !covering.has(route))
+      if (missing.length) {
+        this.error(
+          `vercel.json has no rewrite to /index.html for ${missing.join(', ')}. ` +
+            'Those routes exist in src/App.jsx and would fall to the 404 in production ' +
+            'while working in dev. Add a rewrite for each.'
+        )
+      }
+    },
+    closeBundle() {
+      const dist = path.resolve(__dirname, 'dist')
+      const index = path.join(dist, 'index.html')
+      if (fs.existsSync(index)) fs.copyFileSync(index, path.join(dist, '404.html'))
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   logLevel: 'error',
-  plugins: [react(), cspMatchesOrigins(), shareImageIsReachable()],
+  plugins: [react(), cspMatchesOrigins(), shareImageIsReachable(), spaRoutesAreRewritten()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
