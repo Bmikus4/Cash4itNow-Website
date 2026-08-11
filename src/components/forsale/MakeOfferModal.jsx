@@ -30,10 +30,21 @@ export default function MakeOfferModal({ item, onClose }) {
   // Every offer is forwarded and a human decides. The old auto-reject below 75%
   // of list ran in a stub that never reached anyone, and a machine turning a
   // buyer away is a lost negotiation, not a saved one.
+  //
+  // A contact method is required, but phone OR email — not phone as the other
+  // two item_offer call sites do. An offer is a lower-commitment act than
+  // booking a walkthrough and some people will not hand over a number for one,
+  // so demanding a phone costs real offers where demanding *something* costs
+  // none.
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.offer) {
-      toast.error("Please enter your name and an offer amount.");
+    const missing = [];
+    if (!form.name) missing.push("your name");
+    if (!form.offer) missing.push("an offer amount");
+    if (!form.phone && !form.email) missing.push("a phone number or an email");
+    if (missing.length) {
+      const last = missing.pop();
+      toast.error(`Please enter ${[missing.join(", "), last].filter(Boolean).join(" and ")}.`);
       return;
     }
     setSubmitting(true);
@@ -115,6 +126,10 @@ export default function MakeOfferModal({ item, onClose }) {
               />
             </div>
           </div>
+          <p className="text-muted-foreground text-xs">
+            Give us a phone number or an email * — whichever you prefer. We cannot reply to an
+            offer without one.
+          </p>
 
           <div className="space-y-1.5">
             <label className="font-heading text-xs uppercase tracking-widest">Your Offer ($) *</label>
