@@ -3,11 +3,9 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
-import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { CartProvider } from '@/lib/CartContext';
 import { FavoritesProvider } from '@/lib/FavoritesContext';
 import Favorites from './pages/Favorites';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import AppLayout from './components/layout/AppLayout';
 import Home from './pages/Home';
 import Categories from './pages/Categories';
@@ -16,62 +14,32 @@ import Contact from './pages/Contact';
 import ForSale from './pages/ForSale';
 import SalePage from './pages/SalePage';
 
-const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
-
-  // Show loading spinner while checking app public settings or auth
-  if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  // Handle authentication errors
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
-    }
-  }
-
-  // Render the main app
-  return (
-    <Routes>
-      <Route element={<AppLayout />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/categories" element={<Categories />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/for-sale" element={<ForSale />} />
-        <Route path="/sale/:slug" element={<SalePage />} />
-        <Route path="/favorites" element={<Favorites />} />
-      </Route>
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
-  );
-};
-
-
+// Every route here is public. There is no sign-in and no admin surface on the
+// website — the tool is the admin — so there is nothing to gate and nothing to
+// wait for before the first paint.
 function App() {
-
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <CartProvider>
+    <QueryClientProvider client={queryClientInstance}>
+      <CartProvider>
         <FavoritesProvider>
           <Router>
-            <AuthenticatedApp />
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<Home />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/for-sale" element={<ForSale />} />
+                <Route path="/sale/:slug" element={<SalePage />} />
+                <Route path="/favorites" element={<Favorites />} />
+              </Route>
+              <Route path="*" element={<PageNotFound />} />
+            </Routes>
           </Router>
           <Toaster />
-          </FavoritesProvider>
-        </CartProvider>
-      </QueryClientProvider>
-    </AuthProvider>
+        </FavoritesProvider>
+      </CartProvider>
+    </QueryClientProvider>
   )
 }
 

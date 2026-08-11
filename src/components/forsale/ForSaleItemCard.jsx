@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Tag, CheckCircle2, Heart, Handshake } from "lucide-react";
 import { useCart } from "@/lib/CartContext";
 import { useFavorites } from "@/lib/FavoritesContext";
 import MakeOfferModal from "@/components/forsale/MakeOfferModal";
+import { COMMERCE_ENABLED } from "@/lib/flags";
 
 const conditionColors = {
   Excellent: "bg-green-100 text-green-800",
@@ -85,6 +85,9 @@ export default function ForSaleItemCard({ item, index, onBuyNow }) {
         </div>
         {!isSold && !isPending && (
           <>
+            {/* Cart and Buy Now are V1-gated: the site cannot take money. Make
+                an Offer stays — it is a lead, not a transaction. */}
+            {COMMERCE_ENABLED && (
             <div className="flex gap-2 mt-3">
               <button
                 onClick={() => addToCart(item)}
@@ -105,6 +108,7 @@ export default function ForSaleItemCard({ item, index, onBuyNow }) {
                 Buy Now
               </button>
             </div>
+            )}
             <button
               onClick={() => setShowOffer(true)}
               className="w-full mt-2 flex items-center justify-center gap-2 font-heading font-black text-xs uppercase tracking-wider px-3 py-2.5 border-2 border-foreground/30 text-foreground/70 hover:border-accent hover:text-accent transition-colors"

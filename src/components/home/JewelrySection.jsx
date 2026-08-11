@@ -1,9 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { Phone } from "lucide-react";
-import { base44 } from "@/api/base44Client";
-import MetalPriceTicker from "@/components/home/MetalPriceTicker";
-import JewelryPayoutCalculator from "@/components/home/JewelryPayoutCalculator";
 
 const JEWELRY_IMG = "/img/f3522ea84_generated_image.webp";
 
@@ -22,37 +19,12 @@ const items = [
   "Victorian & Art Deco Pieces",
 ];
 
+// The live-spot-price ticker and the payout calculator were driven by the
+// Base44 LLM integration, which never returned a price on the static build.
+// MetalPriceTicker.jsx and JewelryPayoutCalculator.jsx still stand and need
+// only a real spot-price feed to come back; quoting a made-up number at
+// someone selling their mother's rings is worse than quoting none.
 export default function JewelrySection() {
-  const [prices, setPrices] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(null);
-
-  useEffect(() => {
-    async function fetchPrices() {
-      try {
-        const result = await base44.integrations.Core.InvokeLLM({
-          prompt: "Fetch the current live spot prices for gold, silver, and platinum per troy ounce in USD. Return ONLY the JSON with no commentary.",
-          add_context_from_internet: true,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              gold_per_oz: { type: "number", description: "Gold spot price per troy ounce in USD" },
-              silver_per_oz: { type: "number", description: "Silver spot price per troy ounce in USD" },
-              platinum_per_oz: { type: "number", description: "Platinum spot price per troy ounce in USD" },
-            },
-          },
-        });
-        setPrices(result);
-        setLastUpdated(new Date());
-      } catch (e) {
-        console.error("Failed to fetch metal prices", e);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchPrices();
-  }, []);
-
   return (
     <section className="py-16 md:py-24 bg-background">
       <div className="max-w-7xl mx-auto px-6 md:px-10">
@@ -84,9 +56,7 @@ export default function JewelrySection() {
                 Whether it's a single heirloom piece or an entire jewelry box, we evaluate every item on the spot and pay cash immediately. No consignment, no waiting — just a fair offer from someone who knows the value.
               </p>
 
-              <MetalPriceTicker prices={prices} loading={loading} lastUpdated={lastUpdated} />
 
-              <JewelryPayoutCalculator prices={prices} />
 
               <div className="flex flex-wrap gap-2 mb-10">
                 {items.map((item) => (

@@ -1,29 +1,23 @@
 import React, { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ShoppingCart, Plus, Pencil, Trash2, CheckSquare, Calendar, Search, X } from "lucide-react";
+import { ShoppingCart, Calendar, Search, X } from "lucide-react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
-import { useAuth } from "@/lib/AuthContext";
+import { fetchInventory, INVENTORY_QUERY_KEY } from "@/api/inventoryClient";
 import ForSaleItemCard from "@/components/forsale/ForSaleItemCard";
 import CartDrawer from "@/components/forsale/CartDrawer";
-import AdminForSaleForm from "@/components/forsale/AdminForSaleForm";
 import { useCart } from "@/lib/CartContext";
+import { COMMERCE_ENABLED } from "@/lib/flags";
 
 export default function ForSale() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
   const [showCart, setShowCart] = useState(false);
   const [filterStatus, setFilterStatus] = useState("available");
   const [searchQuery, setSearchQuery] = useState("");
-  const [editItem, setEditItem] = useState(null);
-  const [showAdminForm, setShowAdminForm] = useState(false);
   const { count, addToCart } = useCart();
-  const queryClient = useQueryClient();
 
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ["forsale-items"],
-    queryFn: () => base44.entities.ForSaleItem.list("-created_date", 100),
+    queryKey: INVENTORY_QUERY_KEY,
+    queryFn: fetchInventory,
   });
 
   const q = searchQuery.trim().toLowerCase();
@@ -36,19 +30,6 @@ export default function ForSale() {
     const description = (item.description || "").toLowerCase();
     return title.includes(q) || category.includes(q) || description.includes(q);
   });
-
-  const handleMarkSold = async (e, item) => {
-    e.stopPropagation();
-    await base44.entities.ForSaleItem.update(item.id, { status: "sold" });
-    queryClient.invalidateQueries({ queryKey: ["forsale-items"] });
-  };
-
-  const handleDelete = async (e, item) => {
-    e.stopPropagation();
-    if (!window.confirm(`Delete "${item.title}"? This cannot be undone.`)) return;
-    await base44.entities.ForSaleItem.delete(item.id);
-    queryClient.invalidateQueries({ queryKey: ["forsale-items"] });
-  };
 
   const handleBuyNow = (item) => {
     addToCart(item);
@@ -79,15 +60,7 @@ export default function ForSale() {
               </Link>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0 mt-2">
-              {isAdmin && (
-                <button
-                  onClick={() => { setEditItem(null); setShowAdminForm(true); }}
-                  className="flex items-center gap-2 bg-background text-foreground font-heading font-black text-sm uppercase tracking-wider px-5 py-3 hover:bg-background/90 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Item
-                </button>
-              )}
+              {COMMERCE_ENABLED && (
               <button
                 onClick={() => setShowCart(true)}
                 className="relative flex items-center gap-2 bg-accent text-white font-heading font-black text-sm uppercase tracking-wider px-5 py-3 hover:bg-accent/90 transition-colors"
@@ -100,6 +73,7 @@ export default function ForSale() {
                   </span>
                 )}
               </button>
+              )}
             </div>
           </motion.div>
         </div>
@@ -176,54 +150,19 @@ export default function ForSale() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filtered.map((item, i) => (
-                <div key={item.id} className="relative group">
-                  <ForSaleItemCard
-                    item={item}
-                    index={i}
-                    onBuyNow={handleBuyNow}
-                  />
-                  {isAdmin && (
-                    <div className="absolute top-2 left-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setEditItem(item); setShowAdminForm(true); }}
-                        className="bg-foreground text-background p-1.5 hover:bg-accent transition-colors"
-                        title="Edit"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      {item.status !== "sold" && (
-                        <button
-                          onClick={(e) => handleMarkSold(e, item)}
-                          className="bg-green-700 text-white p-1.5 hover:bg-green-800 transition-colors"
-                          title="Mark as Sold"
-                        >
-                          <CheckSquare className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      <button
-                        onClick={(e) => handleDelete(e, item)}
-                        className="bg-destructive text-white p-1.5 hover:bg-destructive/80 transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <ForSaleItemCard
+                  key={item.id}
+                  item={item}
+                  index={i}
+                  onBuyNow={handleBuyNow}
+                />
               ))}
             </div>
           )}
         </div>
       </section>
 
-      {showCart && <CartDrawer onClose={() => setShowCart(false)} />}
-
-      {showAdminForm && (
-        <AdminForSaleForm
-          editItem={editItem}
-          onClose={() => { setShowAdminForm(false); setEditItem(null); }}
-        />
-      )}
+      {COMMERCE_ENABLED && showCart && <CartDrawer onClose={() => setShowCart(false)} />}
     </div>
   );
 }

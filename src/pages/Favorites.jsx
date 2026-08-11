@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { fetchInventory, INVENTORY_QUERY_KEY } from "@/api/inventoryClient";
 import { useFavorites } from "@/lib/FavoritesContext";
 import ForSaleItemCard from "@/components/forsale/ForSaleItemCard";
 
@@ -11,8 +11,8 @@ export default function Favorites() {
   const { favorites } = useFavorites();
 
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ["forsale-items"],
-    queryFn: () => base44.entities.ForSaleItem.list("-created_date", 200),
+    queryKey: INVENTORY_QUERY_KEY,
+    queryFn: fetchInventory,
   });
 
   const favoriteItems = items.filter((item) => favorites.includes(item.id));
