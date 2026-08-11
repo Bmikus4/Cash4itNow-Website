@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build && node scripts/prerender.mjs && node scripts/check-sitemap.mjs && node scripts/check-category-text.mjs",
     "build:novercel": "vite build",
+    "predeploy": "node scripts/predeploy.mjs",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
