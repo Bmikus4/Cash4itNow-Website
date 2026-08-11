@@ -27,10 +27,17 @@ function Section({ section }) {
       <div className="h-1.5 bg-accent w-16 mb-6" />
 
       {section.table && (
-        // Scrolls inside itself: five columns of comparison at 390px wide would
-        // otherwise push the whole document sideways.
+        // Scrolls inside itself rather than pushing the document sideways: five
+        // columns of comparison cannot fit 390px at a readable size. The floor
+        // is applied ONLY past three columns — measured at 390, a flat
+        // min-w-[560px] made the two-column table scroll 222px when it fit the
+        // viewport with room to spare, which is a worse read than a plain table.
         <div className="overflow-x-auto mb-6 border-2 border-foreground">
-          <table className="w-full text-left border-collapse min-w-[560px]">
+          <table
+            className={`w-full text-left border-collapse ${
+              section.table.columns.length > 3 ? "min-w-[560px]" : ""
+            }`}
+          >
             <caption className="sr-only">{section.table.caption}</caption>
             <thead>
               <tr className="bg-foreground text-background">
