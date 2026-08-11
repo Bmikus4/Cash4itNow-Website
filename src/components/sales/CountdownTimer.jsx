@@ -44,9 +44,16 @@ export default function CountdownTimer({ startsAt }) {
       <div className="grid grid-cols-4 gap-1.5">
         {units.map((u) => (
           <div key={u.label} className="bg-background/10 border border-background/20 text-center py-1.5">
-            <div className="font-heading font-black text-background text-lg leading-none tabular-nums">
+            {/* data-countdown-value is how the prerender crawl finds these to
+                empty them. A live second baked into a static snapshot is both
+                wrong to a reader and fatal to byte-identical builds; emptied, the
+                client fills it on first paint. Do not remove the attribute. */}
+            <span
+              data-countdown-value
+              className="block font-heading font-black text-background text-lg leading-none tabular-nums"
+            >
               {String(u.value).padStart(2, "0")}
-            </div>
+            </span>
             <div className="font-heading text-background/40 text-[9px] uppercase tracking-wider mt-0.5">{u.label}</div>
           </div>
         ))}
