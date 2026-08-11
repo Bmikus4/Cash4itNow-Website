@@ -8,8 +8,10 @@ import ForSaleItemCard from "@/components/forsale/ForSaleItemCard";
 import CartDrawer from "@/components/forsale/CartDrawer";
 import { useCart } from "@/lib/CartContext";
 import { COMMERCE_ENABLED } from "@/lib/flags";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 export default function ForSale() {
+  useDocumentTitle("Antiques & Collectibles For Sale");
   const [showCart, setShowCart] = useState(false);
   const [filterStatus, setFilterStatus] = useState("available");
   const [searchQuery, setSearchQuery] = useState("");

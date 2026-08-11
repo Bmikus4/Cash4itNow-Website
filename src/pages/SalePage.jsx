@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { fetchSales, saleDateRange, saleLocation, SALES_QUERY_KEY } from "@/api/salesClient";
 import CountdownTimer from "@/components/sales/CountdownTimer";
 import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 /**
  * The catalog's item shape is not pinned by the contract yet, so both of the
@@ -32,6 +33,14 @@ export default function SalePage() {
 
   const sale = [...(data?.upcoming ?? []), ...(data?.past ?? [])].find((s) => s.slug === slug);
   const isUpcoming = (data?.upcoming ?? []).some((s) => s.slug === slug);
+
+  // Before the early returns: the loading and not-found states are pages a
+  // person can sit on, and they need a title too. The town is in it because
+  // "estate sale in Mount Lebanon" is what someone actually searches.
+  const where = sale ? saleLocation(sale) : "";
+  useDocumentTitle(
+    sale ? [sale.title, where && `Estate Sale in ${where}`].filter(Boolean).join(" — ") : "Estate Sale"
+  );
 
   if (isLoading) {
     return (

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useLeadForm, CONTACT_PHONE, CONTACT_PHONE_HREF } from "@/api/leadForm";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 const TIME_SLOTS = [
   "Morning (8am-12pm)",
@@ -35,6 +36,7 @@ const CHIP_CLASS = "text-xs font-heading font-bold uppercase px-3 py-2 border-2 
  * the thank-you state, and can be skipped without cost.
  */
 export default function Contact() {
+  useDocumentTitle("Contact — Free Estate Evaluation");
   const [form, setForm] = useState({ name: "", phone: "", property_address: "", message: "" });
   const [sending, setSending] = useState(false);
   const [captured, setCaptured] = useState(false);

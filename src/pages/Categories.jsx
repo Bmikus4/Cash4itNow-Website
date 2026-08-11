@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Phone } from "lucide-react";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 const ORIGINAL_FLYER = "/img/14dc69cc4_Screenshot_20260524_215817_Facebook.webp";
 
@@ -64,6 +65,8 @@ const additionalItems = [
 ];
 
 export default function Categories() {
+  useDocumentTitle("What We Buy");
+
   return (
     <div className="pt-16 bg-background">
       {/* Header with original flyer */}

@@ -6,8 +6,10 @@ import { Link } from "react-router-dom";
 import { fetchInventory, INVENTORY_QUERY_KEY } from "@/api/inventoryClient";
 import { useFavorites } from "@/lib/FavoritesContext";
 import ForSaleItemCard from "@/components/forsale/ForSaleItemCard";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 export default function Favorites() {
+  useDocumentTitle("Saved Items");
   const { favorites } = useFavorites();
 
   const { data: items = [], isLoading } = useQuery({

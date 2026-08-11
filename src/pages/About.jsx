@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Shield, Heart, Handshake, Phone, DollarSign } from "lucide-react";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 const VETERAN_IMG = "/img/69fb4adcd_generated_c67afaf6.webp";
 const ESTATE_IMG = "/img/37a3cc3a9_generated_e3d6fb2b.webp";
@@ -13,6 +14,8 @@ const values = [
 ];
 
 export default function About() {
+  useDocumentTitle("Our Story");
+
   return (
     <div className="pt-16 bg-background">
       {/* Hero */}

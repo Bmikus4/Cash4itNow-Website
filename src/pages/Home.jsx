@@ -8,8 +8,11 @@ import PropertyServicesSection from "../components/home/PropertyServicesSection"
 import TestimonialsSection from "../components/home/TestimonialsSection";
 import JewelrySection from "../components/home/JewelrySection";
 import PastSalesSection from "../components/home/PastSalesSection";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 export default function Home() {
+  useDocumentTitle(null);
+
   return (
     <div>
       <HeroSection />
