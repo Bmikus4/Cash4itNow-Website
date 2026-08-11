@@ -185,6 +185,50 @@ function spaRoutesAreRewritten() {
   }
 }
 
+/** Named once: the generator writes it and the robots.txt gate checks for it. */
+const SITEMAP_FILE = 'sitemap.xml'
+
+/**
+ * Fails the build if public/robots.txt's `Sitemap:` line is not the canonical
+ * origin's sitemap.
+ *
+ * Same coupling as the og:image gate and the same reason. robots.txt cannot
+ * import a module, so its absolute URL is a SECOND copy of the origin — move
+ * VITE_API_ORIGIN or the canonical host and the copy stays behind, pointing every
+ * crawler at a sitemap on a host we no longer serve. Two places holding one
+ * origin is precisely the shape that produced F7, where the CSP and the clients
+ * disagreed and the build stayed green.
+ *
+ * The failure is quiet in the worst way: robots.txt still parses, the site still
+ * loads, and the only symptom is that nothing gets indexed from the sitemap.
+ *
+ * No Sitemap line is a valid choice and passes — the file documents that it must
+ * be removed if the generator ever is. A WRONG one is what this refuses.
+ */
+function robotsSitemapMatchesOrigin() {
+  return {
+    name: 'robots-sitemap-matches-origin',
+    apply: 'build',
+    buildStart() {
+      const robotsPath = path.resolve(__dirname, 'public/robots.txt')
+      if (!fs.existsSync(robotsPath)) return
+
+      const line = fs.readFileSync(robotsPath, 'utf8').match(/^\s*Sitemap:\s*(\S+)\s*$/im)?.[1]
+      if (!line) return
+
+      const { site } = resolveOrigins(process.env)
+      const expected = `${site}/${SITEMAP_FILE}`
+      if (line !== expected) {
+        this.error(
+          `public/robots.txt points crawlers at "${line}", but this build's sitemap is "${expected}". ` +
+            'Every crawler would fetch a sitemap on the wrong host and index nothing from it. ' +
+            'Update robots.txt, or correct src/lib/origins.js.'
+        )
+      }
+    },
+  }
+}
+
 /**
  * Writes dist/sitemap.xml from the same route source as everything else.
  *
@@ -223,7 +267,7 @@ function sitemapFromRoutes() {
 
       const dist = path.resolve(__dirname, 'dist')
       if (!fs.existsSync(dist)) return
-      fs.writeFileSync(path.join(dist, 'sitemap.xml'), sitemapXml(resolveOrigins(process.env).site, listed))
+      fs.writeFileSync(path.join(dist, SITEMAP_FILE), sitemapXml(resolveOrigins(process.env).site, listed))
     },
   }
 }
@@ -236,6 +280,7 @@ export default defineConfig({
     cspMatchesOrigins(),
     noStrayOriginLiterals(),
     shareImageIsReachable(),
+    robotsSitemapMatchesOrigin(),
     spaRoutesAreRewritten(),
     sitemapFromRoutes(),
   ],
