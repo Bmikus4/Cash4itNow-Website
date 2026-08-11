@@ -58,6 +58,11 @@ export default function Footer() {
                 { label: "For Sale", path: "/for-sale" },
                 { label: "What We Buy", path: "/categories" },
                 { label: "Our Story", path: "/about" },
+                // Footer, not the top nav. Every page linking to /blog is what
+                // the answer pages need to be crawled and to pass authority;
+                // a sixth item in the primary nav is a layout decision at 1440
+                // and Ben's eye, so it is raised with him rather than taken here.
+                { label: "Answers", path: "/blog" },
                 { label: "Contact", path: "/contact" },
               ].map((link) => (
                 <Link key={link.path} to={link.path} className="font-heading text-background/70 hover:text-accent transition-colors uppercase text-sm tracking-wide">
