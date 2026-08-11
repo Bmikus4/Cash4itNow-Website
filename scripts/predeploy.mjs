@@ -47,6 +47,18 @@ const blocked = (name, detail, why) => record("BLOCKED", name, detail, why);
 const skip = (name, detail) => record("SKIP", name, detail);
 
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
+
+/**
+ * JSON.parse rejects a leading BOM, and on Windows a BOM is one careless
+ * `Set-Content -Encoding utf8` away — that command adds one silently, and the
+ * file looks identical in every editor and in `git diff`. Found the hard way:
+ * it turned this pack into a stack trace instead of a report.
+ *
+ * Stripping it here is so the pack can DIAGNOSE the problem in the bomCheck
+ * below rather than dying before it reaches it. The BOM is still reported as a
+ * failure — it is not tolerated, just survived long enough to be named.
+ */
+const readJson = (rel) => JSON.parse(read(rel).replace(/^﻿/, ""));
 const readDist = (rel) => fs.readFileSync(path.join(DIST, rel), "utf8");
 const exists = (rel) => fs.existsSync(path.join(DIST, rel));
 
@@ -88,6 +100,35 @@ try {
 }
 
 // ---------------------------------------------------------------------------
+// 0b. NO BYTE-ORDER MARK on the files the build parses or serves.
+//
+// Found the hard way while negative-testing this very pack: PowerShell's
+// `Set-Content -Encoding utf8` writes a BOM, silently. JSON.parse REJECTS a
+// leading BOM, so a BOM'd vercel.json takes down vite.config's gates, the
+// sitemap check and this pack — as a stack trace, not a report. The file is
+// byte-different and looks identical in every editor and in `git diff`.
+//
+// It is a live hazard rather than a hypothetical: this is a Windows box, the
+// obvious way to edit a file from a shell here is exactly that command, and the
+// same command has already mangled an accented character in this repo once.
+// ---------------------------------------------------------------------------
+{
+  const BOM = Buffer.from([0xef, 0xbb, 0xbf]);
+  const guarded = ["vercel.json", "package.json", "index.html", "public/robots.txt", "src/content/posts.js", "src/content/categories.js"];
+  const bommed = guarded.filter((rel) => {
+    const file = path.join(ROOT, rel);
+    return fs.existsSync(file) && fs.readFileSync(file).subarray(0, 3).equals(BOM);
+  });
+  if (bommed.length) {
+    fail(
+      "no BOM on parsed/served files",
+      bommed.join(", "),
+      "JSON.parse rejects a leading BOM, so the build gates and this pack die as a stack trace instead of reporting. Written silently by PowerShell's `Set-Content -Encoding utf8`; rewrite the file without one"
+    );
+  } else pass("no BOM on parsed/served files", `${guarded.length} files clean`);
+}
+
+// ---------------------------------------------------------------------------
 // 1. ORIGIN COHERENCE, END TO END. F7's exact shape, and it has recurred twice —
 //    once as leadClient's literal, once as robots.txt's Sitemap line. Every
 //    place an origin is written or emitted must name the same one.
@@ -95,7 +136,7 @@ try {
 const { api, site, connectOrigins } = resolveOrigins(process.env);
 
 {
-  const vercel = JSON.parse(read("vercel.json"));
+  const vercel = readJson("vercel.json");
   const csp = vercel.headers?.flatMap((h) => h.headers ?? []).find((h) => h.key === "Content-Security-Policy")?.value ?? "";
   const connectSrc = csp.split(";").map((s) => s.trim()).find((s) => s.startsWith("connect-src")) ?? "";
   const missing = connectOrigins.filter((o) => !connectSrc.includes(o));
@@ -150,7 +191,7 @@ if (exists("sitemap.xml")) {
 // ---------------------------------------------------------------------------
 const app = read("src/App.jsx");
 const { static: staticRoutes, dynamic } = routesFromApp(app, postExpansions(POSTS));
-const rewrites = JSON.parse(read("vercel.json")).rewrites ?? [];
+const rewrites = readJson("vercel.json").rewrites ?? [];
 
 {
   const covering = new Set(
@@ -282,7 +323,7 @@ if (QUICK) {
       {
         gate: "route list gate",
         file: "vercel.json",
-        mutate: (text) => JSON.stringify({ ...JSON.parse(text), rewrites: JSON.parse(text).rewrites.filter((r) => r.source !== "/about") }, null, 2),
+        mutate: (text) => JSON.stringify({ ...JSON.parse(text.replace(/^﻿/, "")), rewrites: JSON.parse(text.replace(/^﻿/, "")).rewrites.filter((r) => r.source !== "/about") }, null, 2),
       },
       {
         gate: "CSP connect-src gate",
