@@ -18,12 +18,20 @@
  * rather than defaulting to the reassuring answer. An absent channel is NOT an
  * empty catalog. The page's job is then to make no claim it cannot support.
  *
+ * PRESENCE IS NOT DECIDED HERE. `src/api/catalogWire.js` owns how the wire
+ * spells "no item channel" versus "a channel that exists", per ledger row 59.
+ * This file decides only what a PRESENT channel holds. Keeping the two apart is
+ * the fix: asking them as one question is what let a missing channel be reported
+ * as an empty one.
+ *
  * IT DOES NOT OWN THE CONTRACT. The publication API (Phase 4) owns it. This
  * reads defensively enough to survive whichever shape lands, and every field
  * name it looks for that is not already in the live feed is marked PROVISIONAL
  * below. The proposal carried to that terminal is
  * fleet/drops/c4in-catalog-contract-proposal.md.
  */
+
+import { channelPresence, wireViolationMessage, CHANNEL_ABSENT, CHANNEL_UNRECOGNISED } from "./catalogWire.js";
 
 /** No `catalog` on the sale at all. The channel has published nothing for it. */
 export const CATALOG_ABSENT = "absent";
@@ -92,7 +100,22 @@ function normaliseItem(entry, index) {
 export function readCatalog(catalog) {
   const none = { state: CATALOG_ABSENT, items: [], count: null, reference: null };
 
-  if (catalog === undefined || catalog === null) return none;
+  // PRESENCE IS DECIDED IN ONE PLACE — src/api/catalogWire.js — and it is asked
+  // BEFORE anything looks at items or counts. Mixing "is there a channel" with
+  // "what does it hold" is precisely what let a missing channel be reported as
+  // an empty one. See ledger row 59.
+  const presence = channelPresence(catalog);
+
+  if (presence === CHANNEL_ABSENT) return none;
+
+  if (presence === CHANNEL_UNRECOGNISED) {
+    // Loud, and then silent on the page. A payload we cannot read is a contract
+    // break, not an empty catalog, so it must not be laundered into one — but a
+    // sale page must still render, and saying nothing is the only response that
+    // cannot be a lie.
+    if (typeof console !== "undefined") console.error(`[catalog] ${wireViolationMessage(catalog)}`);
+    return { ...none, violation: wireViolationMessage(catalog) };
+  }
 
   // An inlined array: the mock's shape today, and a plausible published shape.
   if (Array.isArray(catalog)) {
@@ -103,7 +126,10 @@ export function readCatalog(catalog) {
     return { state: CATALOG_EMPTY, items: [], count: 0, reference: null };
   }
 
-  if (typeof catalog !== "object") return none;
+  // No non-object guard here on purpose: channelPresence() has already ruled
+  // anything that is not an array or an object UNRECOGNISED. A second guard
+  // returning `none` would quietly re-map a contract break onto "no channel",
+  // which is the exact laundering row 59 forbids.
 
   const reference = typeof catalog.slug === "string" && catalog.slug ? catalog.slug : null;
   const itemsKey = firstKey(catalog, ITEMS_KEYS);
@@ -128,6 +154,11 @@ export function readCatalog(catalog) {
     return { state: CATALOG_PENDING, items: [], count, reference };
   }
 
-  // An object that carries no evidence of a catalog at all.
-  return none;
+  // A PRESENT object carrying no items, no count and no slug. Under the ruling
+  // this is still a channel that exists, so it is PENDING and not absent: the
+  // feed chose to send a catalog field, and "nothing has ever been published"
+  // is a claim only omission or null may make. This line is the ruling's
+  // sharpest edge — before row 59 it returned absent, which reported a live
+  // channel as no channel.
+  return { state: CATALOG_PENDING, items: [], count: null, reference: null };
 }

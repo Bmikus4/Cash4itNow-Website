@@ -40,7 +40,8 @@ const cases = [
   ["reference with no count", fixtures.referenceNoCount, CATALOG_PENDING],
   ["absent", fixtures.absent, CATALOG_ABSENT],
   ["absent (null)", fixtures.absentNull, CATALOG_ABSENT],
-  ["not a catalog", fixtures.garbage, CATALOG_ABSENT],
+  ["present but uninformative object", fixtures.presentButUninformative, CATALOG_PENDING],
+  ["present empty object {}", fixtures.presentEmptyObject, CATALOG_PENDING],
   ["items present but none usable", fixtures.itemsAllUnusable, CATALOG_PENDING],
 ];
 for (const [name, input, expected] of cases) {
@@ -73,6 +74,56 @@ for (const [name, input, expected] of cases) {
     new Set([absent, empty, pending]).size === 3,
     "two states have collapsed into one — that collapse IS the defect this module exists to prevent"
   );
+}
+
+// --- THE WIRE RULING (ledger row 59) ----------------------------------------
+//
+// The distinction states 2 and 3 hang from, asserted at the wire rather than at
+// the outputs. Written this way ON PURPOSE: the collapse returned once from a
+// defensive convenience inside the reader, so a test that only checks four
+// output values would pass again the moment someone re-added
+// `if (!recognised) return []`. These assert the RULE.
+{
+  const absent = readCatalog(fixtures.absent);
+  const absentNull = readCatalog(fixtures.absentNull);
+  const emptyPublished = readCatalog(fixtures.emptyChannel);
+  const presentBare = readCatalog(fixtures.presentEmptyObject);
+
+  check(
+    "RULING: absent means NO ITEM CHANNEL",
+    absent.state === CATALOG_ABSENT && absentNull.state === CATALOG_ABSENT,
+    "ledger row 59: omission and null both mean nothing has ever been published"
+  );
+  check(
+    "RULING: present means the channel EXISTS",
+    presentBare.state !== CATALOG_ABSENT,
+    "a present `catalog` field was read as no channel. Row 59: present is present — only omission or null may claim nothing was ever published. See fleet/briefs/c4in-website-catalog-wire-ruling.md"
+  );
+  check(
+    "RULING: absent and published-and-empty are DIFFERENT FACTS",
+    absent.state !== emptyPublished.state,
+    "states 2 and 3 have collapsed. A page saying 'no photos from this sale' when the truth is 'not published yet' tells the visitor the opposite of what is true, confidently. This is F3d returning. See ledger row 59"
+  );
+  check(
+    "RULING: the three spellings are not equivalent",
+    new Set([absent.state, emptyPublished.state, presentBare.state]).size === 3,
+    "omission, an empty array and `{}` must produce three different answers; treating them as one is how a contract stops being a contract"
+  );
+}
+
+// --- unreadable payloads are a contract break, not an empty catalog ---------
+for (const [name, input] of [
+  ["string", fixtures.wireViolationString],
+  ["number", fixtures.wireViolationNumber],
+  ["boolean", fixtures.wireViolationBoolean],
+]) {
+  const read = readCatalog(input);
+  check(
+    `wire violation (${name}) is flagged, not laundered`,
+    read.state === CATALOG_ABSENT && typeof read.violation === "string" && read.violation.includes("row 59"),
+    "an unreadable payload must carry a violation naming the ruling; silently reading it as 'no channel' hides a contract break as a normal empty state"
+  );
+  check(`wire violation (${name}) renders nothing`, read.items.length === 0, "the page must say nothing rather than guess");
 }
 
 // --- the count is evidence, not a default -----------------------------------

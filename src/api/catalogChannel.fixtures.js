@@ -55,8 +55,26 @@ export const absent = undefined;
 /** The field is present but null — same meaning as absent, and it occurs. */
 export const absentNull = null;
 
-/** Not a catalog. Must not be read as an empty one. */
-export const garbage = { unrelated: true };
+/**
+ * A PRESENT object carrying nothing we recognise. Under ledger row 59 this is a
+ * channel that EXISTS — present is present — so it reads as pending, not absent.
+ * Before that ruling it read as absent, which reported a live channel as no
+ * channel. Renamed from `garbage` because it is not garbage: it is a legitimate
+ * spelling of "the channel exists and this response carries nothing".
+ */
+export const presentButUninformative = { unrelated: true };
+
+/** `{}` — the third spelling the ruling forbids treating as "not published". */
+export const presentEmptyObject = {};
+
+/**
+ * Shapes the contract does not define at all. NOT absent: absent is a fact the
+ * wire stated, these are the wire saying something unreadable, and conflating
+ * them would hide a contract break as a normal empty state.
+ */
+export const wireViolationString = "published";
+export const wireViolationNumber = 40;
+export const wireViolationBoolean = true;
 
 /**
  * A publication bug: internal fields present, plus one item whose image is
