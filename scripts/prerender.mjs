@@ -75,6 +75,23 @@ async function connect() {
  * invisible, which is worse than no snapshot because it looks like a success.
  */
 async function snapshot(send, route) {
+  /*
+   * Tells the app it is being SNAPSHOTTED, not visited.
+   *
+   * The sales feed is not reachable from a build machine, so every snapshot run
+   * gets a degraded answer — and a degraded answer is a fact about ONE MOMENT.
+   * Baking "we couldn't load the sales list" into a static file freezes that
+   * moment for every visitor and every crawler until the next build, which is
+   * the cached-503 hazard the platform sends `no-store` to avoid, in its most
+   * extreme form: an apology that outlives its cause by weeks, on a site whose
+   * feed is healthy.
+   *
+   * So a snapshot renders sections as though nothing were scheduled, and the
+   * live client — which can actually reach the feed — decides between the list
+   * and the notice. This matches the file's own non-negotiable: an unreachable
+   * feed degrades to "stays client-rendered", never to a claim.
+   */
+  await send("Page.addScriptToEvaluateOnNewDocument", { source: "window.__C4IN_SNAPSHOT__ = true;" });
   await send("Page.navigate", { url: `http://localhost:${PORT}${route}` });
   await sleep(2600);
   for (let i = 0; i < SCROLL_FRAMES; i++) {

@@ -5,7 +5,7 @@ import { Calendar, ArrowRight, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
 import { salesQuery, saleDateRange, saleGridClass, saleLocation } from "@/api/salesClient";
-import { sectionMode } from "@/api/salesWire";
+import { sectionMode, isSnapshot } from "@/api/salesWire";
 import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
 import CountdownTimer from "@/components/sales/CountdownTimer";
 import SalesUnavailableNotice from "@/components/sales/SalesUnavailableNotice";
@@ -14,7 +14,7 @@ import { useJsonLd, saleEventsGraph } from "@/lib/structuredData";
 export default function UpcomingSalesSection() {
   const { data, isLoading } = useQuery(salesQuery());
   const sales = data?.upcoming ?? [];
-  const mode = sectionMode(data, sales);
+  const mode = sectionMode(data, sales, { snapshot: isSnapshot() });
 
   // Emitted HERE and not on the sale page alone, and the reason is the prerender
   // boundary rather than taste: /sale/:slug is deliberately not snapshotted until

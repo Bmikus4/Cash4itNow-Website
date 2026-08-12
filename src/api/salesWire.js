@@ -99,10 +99,27 @@ export const isDegraded = (result) => result?.state === FEED_DEGRADED;
  * `hidden` and `unavailable` MUST NEVER BE THE SAME VALUE: nothing scheduled is
  * not a failure and the section leaves the page, but a feed we could not read is
  * a fact the visitor is owed.
+ *
+ * `snapshot` IS THE ONE EXCEPTION, AND IT IS NOT A WEAKENING OF THAT RULE.
+ * A build machine cannot reach the feed, so the prerenderer always gets a
+ * degraded answer — and a degradation is true of one moment. Writing the notice
+ * into a static file freezes that moment for every visitor until the next build:
+ * the cached-503 hazard the platform sends `no-store` to avoid, except baked,
+ * and outliving its cause by weeks on a site whose feed is fine. A snapshot
+ * therefore says nothing, and the live client, which can actually reach the
+ * feed, decides between the list and the notice.
  */
-export function sectionMode(result, sales) {
-  if (isDegraded(result)) return "unavailable";
+export function sectionMode(result, sales, { snapshot = false } = {}) {
+  if (isDegraded(result)) return snapshot ? "hidden" : "unavailable";
   return asArray(sales).length === 0 ? "hidden" : "list";
+}
+
+/**
+ * True while the prerenderer is capturing this page. Set by `prerender.mjs`
+ * before navigation; absent in every real browser.
+ */
+export function isSnapshot() {
+  return typeof globalThis !== "undefined" && globalThis.__C4IN_SNAPSHOT__ === true;
 }
 
 /**

@@ -4,12 +4,12 @@ import { motion } from "framer-motion";
 import { CalendarCheck, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { salesQuery, saleDateRange, saleGridClass, saleLocation } from "@/api/salesClient";
-import { sectionMode } from "@/api/salesWire";
+import { sectionMode, isSnapshot } from "@/api/salesWire";
 
 export default function PastSalesSection() {
   const { data, isLoading } = useQuery(salesQuery());
   const sales = data?.past ?? [];
-  const mode = sectionMode(data, sales);
+  const mode = sectionMode(data, sales, { snapshot: isSnapshot() });
 
   // THIS SECTION STAYS SILENT WHEN THE FEED IS DEGRADED, and that is a page-level
   // decision rather than an oversight: `UpcomingSalesSection` owns the notice, so

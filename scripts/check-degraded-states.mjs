@@ -141,6 +141,28 @@ for (const [name, fixture, expected] of cases) {
   );
 }
 
+// --- a snapshot must never bake the notice into a static file ---------------
+{
+  const degradedFeed = read(fixtures.degradedConfiguration);
+  const emptyFeed = read(fixtures.feedGenuinelyEmpty);
+
+  check(
+    "snapshot: degraded renders hidden, never the notice",
+    sectionMode(degradedFeed, [], { snapshot: true }) === "hidden",
+    "A BUILD MACHINE CANNOT REACH THE FEED, so every prerender gets a degraded answer. Writing the notice into dist/home/index.html freezes one moment's failure for every visitor until the next build — the cached-503 hazard the platform sends no-store to avoid, except baked. This gate exists because that regression was measured in dist, not reasoned about."
+  );
+  check(
+    "snapshot: a live visitor still gets the notice",
+    sectionMode(degradedFeed, [], { snapshot: false }) === "unavailable",
+    "the snapshot exception must not leak into the browser, or the whole slice is undone"
+  );
+  check(
+    "snapshot: a real list still renders",
+    sectionMode(emptyFeed, [{ slug: "a" }], { snapshot: true }) === "list",
+    "snapshotting sales that genuinely loaded is the entire point of prerendering"
+  );
+}
+
 // --- calibration: the checker can distinguish, and can also FAIL -------------
 {
   // Known-present: a state this file asserts about really is produced.
