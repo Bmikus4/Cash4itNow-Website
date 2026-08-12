@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { CONTACT_PHONE } from "@/api/leadForm";
 import { resolveOrigins } from "@/lib/origins";
+import { saleEventGraph as buildSaleEvent, saleEventsGraph as buildSaleEvents } from "@/lib/eventGraph";
 
 const { site: SITE_ORIGIN } = resolveOrigins(import.meta.env);
 const SITE_NAME = "Cash 4 It Now";
@@ -173,4 +174,13 @@ export function offerCatalogGraph(categories, extraItems = []) {
     // consumer that does not walk nested catalogs will still read.
     keywords: names.join(", "),
   };
+}
+
+/** Thin wrappers supplying the canonical origin; the logic is in eventGraph.js. */
+export function saleEventGraph(sale, origin = SITE_ORIGIN) {
+  return buildSaleEvent(sale, origin);
+}
+
+export function saleEventsGraph(sales, origin = SITE_ORIGIN) {
+  return buildSaleEvents(sales, origin);
 }

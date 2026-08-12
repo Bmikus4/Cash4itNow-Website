@@ -8,7 +8,7 @@ import { fetchSales, saleDateRange, saleLocation, SALES_QUERY_KEY } from "@/api/
 import CountdownTimer from "@/components/sales/CountdownTimer";
 import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
 import { usePageMeta } from "@/lib/usePageMeta";
-import { useJsonLd, breadcrumbGraph } from "@/lib/structuredData";
+import { useJsonLd, breadcrumbGraph, saleEventGraph } from "@/lib/structuredData";
 
 import { readCatalog, CATALOG_ABSENT, CATALOG_EMPTY, CATALOG_PENDING } from "@/api/catalogChannel";
 
@@ -38,8 +38,6 @@ export default function SalePage() {
       ? [[where, when].filter(Boolean).join(", "), sale.description].filter(Boolean).join(". ")
       : undefined,
   });
-  // No Event graph: that needs the feed, which returns nothing without a
-  // database. A breadcrumb is what this page can carry honestly today.
   useJsonLd(
     "breadcrumb",
     sale
@@ -49,6 +47,16 @@ export default function SalePage() {
         ])
       : null
   );
+  // The canonical home for this Event: the page the Event is about. It is also
+  // emitted on the home page, because /sale/:slug is not prerendered until
+  // Phase 1 and a graph only here reaches no crawler that does not run JS. Same
+  // @id in both places, so it is one event described twice rather than two.
+  //
+  // Past sales get nothing. An Event in the past is not wrong, but the feed
+  // classifies these and we do not second-guess it — and a sale that has already
+  // happened is not what §8.3 wants surfaced. saleEventGraph returns null on a
+  // sale with no usable start date, so a malformed Event cannot be emitted here.
+  useJsonLd("event", sale && isUpcoming ? saleEventGraph(sale) : null);
 
   if (isLoading) {
     return (

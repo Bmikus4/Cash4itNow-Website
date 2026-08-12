@@ -7,10 +7,27 @@ import { Link } from "react-router-dom";
 import { fetchSales, saleDateRange, saleGridClass, saleLocation, SALES_QUERY_KEY } from "@/api/salesClient";
 import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
 import CountdownTimer from "@/components/sales/CountdownTimer";
+import { useJsonLd, saleEventsGraph } from "@/lib/structuredData";
 
 export default function UpcomingSalesSection() {
   const { data, isLoading } = useQuery({ queryKey: SALES_QUERY_KEY, queryFn: fetchSales });
   const sales = data?.upcoming ?? [];
+
+  // Emitted HERE and not on the sale page alone, and the reason is the prerender
+  // boundary rather than taste: /sale/:slug is deliberately not snapshotted until
+  // Phase 1, so an Event graph living only there would be invisible to every
+  // crawler that does not run JS — which is the entire audience §8.3 wants it
+  // for. The home page IS snapshotted and genuinely lists these sales, so the
+  // structured data describes content that is really on the page.
+  //
+  // Both copies carry the same @id, so a consumer reading the home page and the
+  // sale page sees ONE event described twice, not two events.
+  //
+  // Before the early return: hooks cannot be conditional. saleEventsGraph
+  // returns null when there is nothing to say, and useJsonLd then emits no
+  // script — an empty array would claim there are no upcoming sales, which is a
+  // different statement from having no data yet.
+  useJsonLd("sale-events", saleEventsGraph(sales));
 
   // Nothing scheduled is not a failure state: the section leaves the page
   // rather than advertising an empty shelf.
