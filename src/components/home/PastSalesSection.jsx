@@ -3,13 +3,26 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { CalendarCheck, MapPin } from "lucide-react";
 import { format } from "date-fns";
-import { fetchSales, saleDateRange, saleGridClass, saleLocation, SALES_QUERY_KEY } from "@/api/salesClient";
+import { salesQuery, saleDateRange, saleGridClass, saleLocation } from "@/api/salesClient";
+import { sectionMode } from "@/api/salesWire";
 
 export default function PastSalesSection() {
-  const { data, isLoading } = useQuery({ queryKey: SALES_QUERY_KEY, queryFn: fetchSales });
+  const { data, isLoading } = useQuery(salesQuery());
   const sales = data?.past ?? [];
+  const mode = sectionMode(data, sales);
 
-  if (isLoading || sales.length === 0) return null;
+  // THIS SECTION STAYS SILENT WHEN THE FEED IS DEGRADED, and that is a page-level
+  // decision rather than an oversight: `UpcomingSalesSection` owns the notice, so
+  // the home page tells the visitor once. Two identical apologies stacked down
+  // one page reads as a broken site rather than an honest one.
+  //
+  // The STATE is still distinguished here — `mode` is "unavailable", not
+  // "hidden" — so a future change that wants to say something in this section
+  // has the fact available and does not have to re-derive it from an empty list.
+  // Past sales are proof of work, not something a customer is waiting on; the
+  // sale they need is upcoming, which is where the notice and the phone number
+  // are.
+  if (isLoading || mode !== "list") return null;
 
   return (
     <section className="py-16 md:py-24 bg-background">

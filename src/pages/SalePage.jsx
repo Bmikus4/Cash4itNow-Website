@@ -4,9 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Calendar, MapPin, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
-import { fetchSales, saleDateRange, saleLocation, SALES_QUERY_KEY } from "@/api/salesClient";
+import { salesQuery, saleDateRange, saleLocation } from "@/api/salesClient";
+import { salePageMode } from "@/api/salesWire";
 import CountdownTimer from "@/components/sales/CountdownTimer";
 import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
+import SalesUnavailableNotice from "@/components/sales/SalesUnavailableNotice";
 import { usePageMeta } from "@/lib/usePageMeta";
 import { useJsonLd, breadcrumbGraph, saleEventGraph } from "@/lib/structuredData";
 
@@ -14,10 +16,11 @@ import { readCatalog, CATALOG_ABSENT, CATALOG_EMPTY, CATALOG_PENDING } from "@/a
 
 export default function SalePage() {
   const { slug } = useParams();
-  const { data, isLoading } = useQuery({ queryKey: SALES_QUERY_KEY, queryFn: fetchSales });
+  const { data, isLoading } = useQuery(salesQuery());
 
   const sale = [...(data?.upcoming ?? []), ...(data?.past ?? [])].find((s) => s.slug === slug);
   const isUpcoming = (data?.upcoming ?? []).some((s) => s.slug === slug);
+  const mode = salePageMode(data, sale);
 
   // Before the early returns: the loading and not-found states are pages a
   // person can sit on, and they need a title too. The town is in it because
@@ -62,6 +65,24 @@ export default function SalePage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-foreground/20 border-t-accent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // THE SHARPEST CASE ON THE SITE, and the reason this is checked before `!sale`.
+  //
+  // A visitor here followed a link to a specific sale — from the flyer, a text
+  // message, a search result. With a degraded feed the old page told them the
+  // sale DOES NOT EXIST. We do not know that. We know we could not look, and
+  // "not found" is a claim about the world made from a failure to ask.
+  //
+  // `not-found` remains correct when the feed answered and the slug genuinely
+  // is not in it.
+  if (mode === "unavailable") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-6">
+        <SalesUnavailableNotice message={data?.message} tone="light" />
+        <Link to="/" className="text-accent underline font-heading text-sm uppercase">Back to Home</Link>
       </div>
     );
   }

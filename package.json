@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/prerender.mjs && node scripts/check-sitemap.mjs && node scripts/check-category-text.mjs && node scripts/check-catalog-states.mjs && node scripts/check-event-schema.mjs",
+    "build": "vite build && node scripts/prerender.mjs && node scripts/check-sitemap.mjs && node scripts/check-category-text.mjs && node scripts/check-catalog-states.mjs && node scripts/check-degraded-states.mjs && node scripts/check-event-schema.mjs",
     "build:novercel": "vite build",
     "predeploy": "node scripts/predeploy.mjs",
     "lint": "eslint . --quiet",

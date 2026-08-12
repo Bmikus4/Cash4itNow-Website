@@ -387,6 +387,32 @@ if (QUICK) {
           fs.writeFileSync(sitemapPath, original);
         }
       }
+
+      // The degraded-states gate is a source check rather than a build plugin,
+      // so it is re-proved the same way the sitemap one is: break the thing it
+      // guards and require a non-zero exit.
+      //
+      // The mutation is THE COLLAPSE ITSELF — a degraded response reading as an
+      // empty feed — because that is the regression worth defending against and
+      // it is a one-line edit somebody will make while "simplifying" the reader.
+      const wirePath = path.join(ROOT, "src/api/salesWire.js");
+      if (fs.existsSync(wirePath)) {
+        const originalWire = fs.readFileSync(wirePath);
+        try {
+          fs.writeFileSync(
+            wirePath,
+            originalWire
+              .toString("utf8")
+              .replace('return degraded("unreadable", null);', "return { state: FEED_OK, upcoming: [], past: [] };")
+          );
+          let degradedBit = false;
+          try { execFileSync("node", ["scripts/check-degraded-states.mjs"], { cwd: ROOT, stdio: "pipe" }); } catch { degradedBit = true; }
+          if (degradedBit) pass("degraded-states check still fails when broken", "a degraded response collapsed into an empty feed is detected");
+          else fail("degraded-states check still fails when broken", "the collapse went unnoticed", "the platform's 503 could be rendered as 'no sales' again and nothing would say so");
+        } finally {
+          fs.writeFileSync(wirePath, originalWire);
+        }
+      }
     }
   }
 }

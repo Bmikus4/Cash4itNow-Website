@@ -12,11 +12,24 @@
  */
 
 import { resolveOrigins } from "@/lib/origins";
+import { readSalesResponse, FEED_DEGRADED } from "@/api/salesWire";
+import { degradedConfiguration as DEGRADED_MOCK } from "@/api/salesWire.fixtures";
 
 // The origin comes from src/lib/origins.js and nowhere else: a second copy of it
 // is what let the CSP and the actual request target drift apart.
 const ENDPOINT = import.meta.env.VITE_SALES_ENDPOINT || resolveOrigins(import.meta.env).salesEndpoint;
-const USE_MOCK = import.meta.env.VITE_SALES_MOCK === "1";
+
+/**
+ * `1` serves the healthy mock; `degraded` serves the platform's real degraded
+ * response.
+ *
+ * A MOCK THAT NEVER DEGRADES CANNOT SHOW YOU THE DEGRADED PATH. This is F3d's
+ * second hazard with a new face: the mock used to send an array for every sale,
+ * which is why the catalog defect stayed invisible in development for weeks —
+ * the one shape production always sends was the shape the mock never did. Do not
+ * "tidy" this back to a single healthy fixture.
+ */
+const MOCK_MODE = import.meta.env.VITE_SALES_MOCK;
 
 export const SALES_QUERY_KEY = ["public-sales"];
 
@@ -81,15 +94,70 @@ const MOCK = {
   ],
 };
 
-const asArray = (value) => (Array.isArray(value) ? value : []);
-
+/**
+ * Returns a `salesWire` result — `FEED_OK` with both lists, or `FEED_DEGRADED`.
+ * IT DOES NOT THROW, and that is a decision rather than an omission.
+ *
+ * Throwing put the outcome in react-query's `isError`, which no consumer read,
+ * so a 503 and a quiet week were byte-identical on this side too (22452 measured
+ * that: all three consumers destructure only `data` and `isLoading`). Returning
+ * the state as DATA makes it impossible to consume the feed without meeting it.
+ *
+ * It also means react-query sees a success and DOES NOT RETRY — which is the
+ * required behaviour, not a side effect. The server sends `no-store` on this
+ * path because a cached 503 outlives its own cause; retrying or polling it from
+ * here would rebuild the same hazard one layer up.
+ */
 export async function fetchSales() {
-  if (USE_MOCK) return MOCK;
+  if (MOCK_MODE === "degraded") return readSalesResponse(DEGRADED_MOCK.status, DEGRADED_MOCK.body);
+  if (MOCK_MODE === "1") return readSalesResponse(200, MOCK);
 
-  const response = await fetch(ENDPOINT, { headers: { accept: "application/json" } });
-  if (!response.ok) throw new Error(`sales endpoint returned ${response.status}`);
-  const data = await response.json();
-  return { upcoming: asArray(data?.upcoming), past: asArray(data?.past) };
+  let response;
+  try {
+    response = await fetch(ENDPOINT, { headers: { accept: "application/json" } });
+  } catch (cause) {
+    // Unreachable is a different fact from refused, and both are "cannot
+    // answer". Logged because the server logs its half: a degradation nobody
+    // can see is the state we just spent two rows removing.
+    console.error("[sales] endpoint unreachable", cause);
+    return readSalesResponse(0, { ok: false, degraded: "unreachable" });
+  }
+
+  let body = null;
+  try {
+    body = await response.json();
+  } catch {
+    // Left null on purpose: a body we could not parse is not an empty body, and
+    // the wire tells those apart.
+    body = null;
+  }
+
+  const result = readSalesResponse(response.status, body);
+  if (result.state === FEED_DEGRADED) {
+    console.error(`[sales] feed degraded: ${result.reason} (HTTP ${response.status})`);
+  }
+  return result;
+}
+
+/**
+ * The options every consumer of this feed must use. Shared so the three surfaces
+ * cannot drift, and because two of these three settings are the brief's
+ * requirements rather than preferences.
+ *
+ * `retry: false` — never retry a degraded answer. `refetchInterval: false` —
+ * never poll it. `staleTime: 0` — never reuse it without asking again, so a
+ * degraded answer cannot outlive its own cause in this tab the way a cached 503
+ * would have outlived it in a CDN. **If a future change adds caching to this
+ * query, the degraded state must be excluded from it.**
+ */
+export function salesQuery() {
+  return {
+    queryKey: SALES_QUERY_KEY,
+    queryFn: fetchSales,
+    retry: false,
+    refetchInterval: false,
+    staleTime: 0,
+  };
 }
 
 /**

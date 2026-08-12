@@ -4,14 +4,17 @@ import { motion } from "framer-motion";
 import { Calendar, ArrowRight, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
-import { fetchSales, saleDateRange, saleGridClass, saleLocation, SALES_QUERY_KEY } from "@/api/salesClient";
+import { salesQuery, saleDateRange, saleGridClass, saleLocation } from "@/api/salesClient";
+import { sectionMode } from "@/api/salesWire";
 import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
 import CountdownTimer from "@/components/sales/CountdownTimer";
+import SalesUnavailableNotice from "@/components/sales/SalesUnavailableNotice";
 import { useJsonLd, saleEventsGraph } from "@/lib/structuredData";
 
 export default function UpcomingSalesSection() {
-  const { data, isLoading } = useQuery({ queryKey: SALES_QUERY_KEY, queryFn: fetchSales });
+  const { data, isLoading } = useQuery(salesQuery());
   const sales = data?.upcoming ?? [];
+  const mode = sectionMode(data, sales);
 
   // Emitted HERE and not on the sale page alone, and the reason is the prerender
   // boundary rather than taste: /sale/:slug is deliberately not snapshotted until
@@ -29,9 +32,15 @@ export default function UpcomingSalesSection() {
   // different statement from having no data yet.
   useJsonLd("sale-events", saleEventsGraph(sales));
 
+  if (isLoading) return null;
+
   // Nothing scheduled is not a failure state: the section leaves the page
   // rather than advertising an empty shelf.
-  if (isLoading || sales.length === 0) return null;
+  //
+  // A feed we could not READ is a different fact and must not take the same
+  // exit. Vanishing here would tell a customer this business has nothing on,
+  // which is precisely the lie the platform's 503 was added to stop telling.
+  if (mode === "hidden") return null;
 
   return (
     <section className="py-16 md:py-24 bg-foreground">
@@ -49,6 +58,9 @@ export default function UpcomingSalesSection() {
           <div className="h-1.5 bg-accent w-24 mx-auto mt-3" />
         </motion.div>
 
+        {mode === "unavailable" ? (
+          <SalesUnavailableNotice message={data?.message} />
+        ) : (
         <div className={`grid gap-6 ${saleGridClass(sales.length)}`}>
           {sales.map((sale, i) => (
             <motion.div
@@ -103,6 +115,7 @@ export default function UpcomingSalesSection() {
             </motion.div>
           ))}
         </div>
+        )}
       </div>
     </section>
   );
