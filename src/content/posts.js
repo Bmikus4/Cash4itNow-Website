@@ -226,6 +226,111 @@ export const POSTS = [
   },
 
   {
+    slug: "what-happens-after-you-call",
+    question: "What happens after you call?",
+    title: "What Happens After You Call",
+    description:
+      "The sequence from the first phone call to an empty house: what we ask, what the walkthrough is for, what you decide and when, and what you are not committing to by calling.",
+    published: "2026-08-11",
+    updated: "2026-08-11",
+    answer: [
+      "You are not committing to anything by calling. We ask a few questions on the phone, arrange a time to walk the property, and price what is there. That walkthrough is free and carries no obligation to sell through us — if the answer is that you do not need us, that is a fine answer to get.",
+      "After the walkthrough you have a decision to make, and it is the only significant one: an on-site estate sale, an auction, or an outright cash purchase of the contents. From there the sequence is fixed — the contents are sold, whatever is left is cleared so the house is broom-clean, and if the property is being sold we get it listing-ready.",
+      "The thing most people want to know first is where the commitment starts. It starts when you accept a figure or agree a sale date, and not before. The call and the walkthrough are how you find out what you are dealing with.",
+    ],
+    sections: [
+      {
+        heading: "The call",
+        body: [
+          "Short, and mostly us asking. We need to know roughly how full the house is, whether anything has to happen by a particular date, whether anything has already been taken or promised, and whether the property is accessible. Those four answers usually decide which route fits before anyone walks through the door.",
+          "You do not need to know what anything is worth, and you do not need to have tidied. It is genuinely better if you have not — that is on the page about what doesn't sell, and it is the single most expensive mistake families make before a liquidator sees a house.",
+        ],
+        links: [{ label: "Estate sale, auction, or buyout — which fits", to: "/blog/estate-sale-vs-auction-vs-buyout" }],
+      },
+      {
+        heading: "The walkthrough, and why it comes first",
+        body: [
+          "We walk the property and price what is there. No charge, and no obligation to sell through us. It comes first because every other decision depends on it: which route makes sense, whether there is enough to justify staging a sale, and what the property will need once it is empty.",
+          "It is not a formal appraisal and does not pretend to be one — no signed document, no figure for a court file. If the estate needs that kind of valuation, it has to happen before anything is sold or moved, which is why it is worth asking your attorney early rather than after a sale is booked.",
+        ],
+        links: [{ label: "Do I need an appraisal before selling?", to: "/blog/do-i-need-an-appraisal-before-selling" }],
+      },
+      {
+        heading: "What you decide, and when",
+        table: {
+          caption: "Who decides what, at each point in the sequence",
+          columns: ["Point", "The decision", "Whose it is"],
+          rows: [
+            ["Before the walkthrough", "Whether anything must be formally valued first", "The estate's attorney, not us"],
+            ["Before pricing", "What the family is keeping, and who took what", "Yours — and write it down at the time"],
+            ["After the walkthrough", "Sale, auction, or buyout", "Yours, with what the walkthrough found"],
+            ["At the end of the sale", "What happens to the remainder", "Already settled — it is cleared either way"],
+            ["Once the house is empty", "Whether the property needs work before listing", "Yours, and only if you are selling it"],
+          ],
+        },
+        body: [
+          "Everything above the last two rows happens before you have committed to anything.",
+        ],
+      },
+      {
+        heading: "Who you deal with",
+        body: [
+          "One number to call and one crew scheduling the work. If you would rather we did not contact anyone else — an elderly parent, a family member who is not ready for it, a client of yours — say so on the first call and we will not.",
+          "Where a realtor or an attorney refers a property, we call them and not their client unless they ask otherwise.",
+        ],
+        links: [{ label: "For realtors, attorneys and executors", to: "/for-professionals" }],
+      },
+    ],
+  },
+
+  {
+    slug: "paperwork-and-photographs-found-in-a-clearout",
+    question: "We found paperwork and photographs — what should we do with them?",
+    title: "Paperwork and Photographs Found in a Clearout",
+    description:
+      "What to do with documents, letters and family photographs turned up while clearing an estate — what to set aside, what should never go in a skip, and when to decide.",
+    published: "2026-08-11",
+    updated: "2026-08-11",
+    answer: [
+      "Set them aside, and decide before the sale is priced rather than during it. Paperwork is the one category in a house that is genuinely irreplaceable — deeds, titles, policies and statements cannot be re-bought at any price, and neither can a photograph. Everything else in the house has a replacement somewhere; these do not.",
+      "So the rule is simple: nothing made of paper leaves the house with the contents until somebody has looked at it. Not the filing cabinet, not the shoebox in the wardrobe, not the envelopes in the kitchen drawer. Once a clearout is underway, paper is the easiest thing in the building to lose, because it looks like the least valuable thing in it.",
+      "Two separate questions sit underneath this, and they have different answers. What the estate's administration needs is your attorney's call, not ours. What happens to the family material nobody has claimed is a family decision, and it is far easier to make before the house is empty than after.",
+    ],
+    sections: [
+      {
+        heading: "Set aside first, sort later",
+        body: [
+          "Pull it out and put it somewhere that is not going to be cleared. Sorting can happen at a kitchen table weeks later; it cannot happen once the contents have gone.",
+          "The list of what to look for, and where it hides, is on the executor's checklist — it is the same list, and there is no point in reading it twice.",
+        ],
+        links: [{ label: "Executor's checklist for clearing a parent's home", to: "/blog/executors-checklist-clearing-a-parents-home" }],
+      },
+      {
+        heading: "What the estate actually needs is not our call",
+        body: [
+          "Which documents have to be produced, what has to be kept and for how long, what the register of wills expects — those answers come from the estate's attorney and from the county, and they vary by estate. We are not going to guess at them, and a liquidator who tells you confidently what you may shred is guessing.",
+          "What we can say is the practical half: ask that question before the house is cleared rather than after, because it is the only order that works.",
+        ],
+      },
+      {
+        heading: "Anything with identifying details should be destroyed, not binned",
+        body: [
+          "Bank statements, tax paperwork, medical letters, anything carrying a full name with an account number or a date of birth. A skip outside a house that is obviously being cleared after a death is not a private place, and a bag of paper in it is readable by anyone who wants to read it.",
+          "Destroy that material rather than throwing it out. This is the one piece of advice here that is not about value at all — it is about the fact that an estate clearout is visible from the street.",
+        ],
+      },
+      {
+        heading: "Photographs, letters and anything nobody has claimed",
+        body: [
+          "Family photographs and letters have no resale value and are irreplaceable, which is an awkward combination: they are worth nothing to a buyer and everything to the one relative who would have wanted them. That relative is often not the one clearing the house.",
+          "Ask around before the sale rather than after. If nobody wants them, that is a decision the family has made deliberately, which is a different thing from a box that went out with the furniture because nobody thought to ask.",
+          "Photographs of the house and its contents are worth keeping for a different reason — an executor accounting for what was in a property is glad of them later.",
+        ],
+      },
+    ],
+  },
+
+  {
     slug: "do-i-need-an-appraisal-before-selling",
     question: "Do I need an appraisal before selling?",
     title: "Do I Need an Appraisal Before Selling?",

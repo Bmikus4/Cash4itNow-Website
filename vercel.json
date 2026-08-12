@@ -13,6 +13,8 @@
     { "source": "/blog/what-happens-to-what-doesnt-sell", "destination": "/blog/what-happens-to-what-doesnt-sell/index.html" },
     { "source": "/blog/executors-checklist-clearing-a-parents-home", "destination": "/blog/executors-checklist-clearing-a-parents-home/index.html" },
     { "source": "/blog/house-listing-ready-after-a-death", "destination": "/blog/house-listing-ready-after-a-death/index.html" },
+    { "source": "/blog/what-happens-after-you-call", "destination": "/blog/what-happens-after-you-call/index.html" },
+    { "source": "/blog/paperwork-and-photographs-found-in-a-clearout", "destination": "/blog/paperwork-and-photographs-found-in-a-clearout/index.html" },
     { "source": "/blog/do-i-need-an-appraisal-before-selling", "destination": "/blog/do-i-need-an-appraisal-before-selling/index.html" },
     { "source": "/sale/:slug", "destination": "/index.html" },
     { "source": "/(.*)", "destination": "/404.html" }
