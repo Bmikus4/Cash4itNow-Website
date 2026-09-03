@@ -1,4 +1,5 @@
 import React from "react";
+import NewestCatalogSection from "../components/home/NewestCatalogSection";
 import HeroSection from "../components/home/HeroSection";
 import CategoriesPreview from "../components/home/CategoriesPreview";
 import HowItWorksSection from "../components/home/HowItWorksSection";
@@ -20,6 +21,10 @@ export default function Home() {
 
   return (
     <div>
+      {/* Above the hero on Ben's call: the newest catalog is the first thing on
+          the site. It shares SALES_QUERY_KEY with UpcomingSalesSection below, so
+          the two cost one request between them, not two. */}
+      <NewestCatalogSection />
       <HeroSection />
       <UpcomingSalesSection />
       <CategoriesPreview />
