@@ -1,5 +1,23 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "//buildCommand": [
+    "PINNED HERE BECAUSE THE DASHBOARD'S COPY WAS THE ONE VERCEL USED, AND IT WAS STALE.",
+    "Without this key Vercel autodetects Vite and runs whatever the project settings say, which",
+    "was set when this repo was a plain Base44 export and still ran `vite build` alone. So every",
+    "production deploy shipped the SPA shell and nothing else: none of the 16 prerendered pages,",
+    "and none of the five checks below the prerender ever ran in CI. Confirmed live 2026-09-03 —",
+    "/home/index.html, /blog/index.html and /404.html all answered with the 2062-byte shell,",
+    "because those files were not in the deployment at all.",
+    "",
+    "That is invisible from inside the repo. `npm run build` is green locally, the rewrites in",
+    "this file name targets that exist in the local dist, and the deployment succeeds. The only",
+    "evidence is fetching a built path in production and reading the byte count.",
+    "",
+    "The rewrites below DEPEND on prerender.mjs having run: it writes dist/<route>/index.html for",
+    "every one of them, and falls back to writing a shell so that a rewrite target always exists.",
+    "A build command that skips it leaves every rewrite pointing at a missing file."
+  ],
+  "buildCommand": "npm run build",
   "rewrites": [
     { "source": "/", "destination": "/home/index.html" },
     { "source": "/categories", "destination": "/categories/index.html" },
