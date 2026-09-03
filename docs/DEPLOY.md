@@ -54,21 +54,50 @@ caught, so the crawl did not fail loudly; it marked all 16 routes skipped and
 wrote shells instead. The pipeline was not runnable anywhere except a Windows
 workstation, and never had been.
 
-**Fixed 2026-09-03.** `puppeteer` is a devDependency solely to supply a browser,
-`browserExecutable()` resolves `CHROME_PATH` first and falls back to
-`puppeteer.executablePath()`, and `buildCommand` is now `npm run build`. Three
-details are load-bearing and none of them are visible from the code alone:
+**Attempted 2026-09-03.** `puppeteer` is a devDependency solely to supply a
+browser, `browserExecutable()` resolves `CHROME_PATH` first and
+`puppeteer.executablePath()` second, and `buildCommand` is now `npm run build`.
 
-- **`.puppeteerrc.cjs` moves the download into `node_modules/.cache`.** The
-  default is `~/.cache/puppeteer`, which Vercel does not restore, so every
-  deploy would re-fetch ~150MB before the crawl could start.
+**The first CI attempt still produced 0 of 16 snapshots**, and the reason is
+worth writing down because nothing about it is guessable from the repo:
+
+- **Vercel's npm does not run postinstall scripts.** The install log says so and
+  carries on:
+  ```
+  npm warn allow-scripts 3 packages have install scripts not yet covered by allowScripts:
+  npm warn allow-scripts   puppeteer@25.10.0 (postinstall: node install.mjs)
+  ```
+  So the build got the puppeteer library and no browser at all. The crawl now
+  fetches Chrome itself through `@puppeteer/browsers` when the binary is absent,
+  rather than relying on a postinstall hook that a build machine may refuse.
+- **`.puppeteerrc.cjs` moves that download into `node_modules/.cache`.** The
+  default is `~/.cache/puppeteer`, which Vercel does not restore, so it would be
+  re-fetched on every deploy. `browserExecutable()` reads the directory out of
+  that file rather than repeating the path, so the two cannot drift.
 - **`--no-sandbox` and `--disable-dev-shm-usage`.** The build container runs as
   root, where Chrome's sandbox refuses to start; and its `/dev/shm` is 64MB,
-  which the renderer exhausts mid-crawl and dies without a useful message.
-- **A failed crawl now fails the deploy.** `check-category-text.mjs` refuses to
-  certify a shell as a snapshot, so a broken browser no longer ships shells
-  quietly — it stops the deploy. That is the point, but it does mean the crawl
-  is now on the critical path for every production deploy.
+  which the renderer exhausts mid-crawl.
+- **Chrome's stderr is captured, not discarded.** The first attempt reported only
+  "browser never answered on the debugging port", which is equally true of a
+  missing binary, a missing shared library, a sandbox refusal and an exhausted
+  `/dev/shm`. Chrome names which one on stderr in a single line. Throwing that
+  away is what made the first failure cost a deploy to understand.
+
+### A skipped route does NOT fail the build
+
+Worth being exact, because the opposite was written here at first.
+`check-category-text.mjs` prints
+
+```
+CATEGORY TEXT: / was not snapshotted (shell copy) — skipped, nothing to check.
+```
+
+and exits 0. It refuses to *certify* a shell, which is not the same as
+rejecting one. A build whose crawl fails is therefore green and ships shells —
+the same output `vite build` gave before any of this, so the change cannot make
+deploys worse, and equally cannot be assumed to have worked. **Read the build
+log for `PRERENDER: N snapshotted`, or fetch a route in production and read the
+byte count.** 2062 bytes is the shell.
 
 ### What it cost while it was broken, measured
 

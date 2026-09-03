@@ -17,6 +17,7 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import {
   routesFromApp,
@@ -57,7 +58,37 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function browserExecutable() {
   if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
   const { default: puppeteer } = await import("puppeteer");
-  return puppeteer.executablePath();
+  // v25 returns a promise here where older versions returned a string.
+  const executable = await puppeteer.executablePath();
+  if (fs.existsSync(executable)) return executable;
+
+  /*
+   * THE DOWNLOAD IS DONE HERE, NOT BY PUPPETEER'S POSTINSTALL, because Vercel's
+   * npm does not run postinstall scripts. The install log says so plainly and
+   * carries on:
+   *
+   *   npm warn allow-scripts 3 packages have install scripts not yet covered
+   *   npm warn allow-scripts   puppeteer@25.10.0 (postinstall: node install.mjs)
+   *
+   * So `npm install puppeteer` on a build machine gets the library and no
+   * browser, and the first sign of it is 16 skipped routes. `npm approve-scripts`
+   * would fix it by writing an allow-list into package.json — rejected because it
+   * is a per-machine trust decision recorded in a shared file, and because it
+   * would still be silent the next time an install runs somewhere that ignores
+   * it. Fetching the browser explicitly is the same work with the failure in
+   * view.
+   *
+   * cacheDirectory is read from .puppeteerrc.cjs rather than repeated here:
+   * puppeteer's own resolution reads that file too, so a copy could drift and
+   * leave this downloading to one directory and looking in another.
+   */
+  const { install, resolveBuildId, detectBrowserPlatform, Browser } = await import("@puppeteer/browsers");
+  const cacheDir = createRequire(import.meta.url)(path.join(ROOT, ".puppeteerrc.cjs")).cacheDirectory;
+  const platform = detectBrowserPlatform();
+  const buildId = await resolveBuildId(Browser.CHROME, platform, "stable");
+  log(`PRERENDER: no browser on disk — fetching Chrome ${buildId} for ${platform} into ${path.relative(ROOT, cacheDir)}`);
+  const installed = await install({ browser: Browser.CHROME, platform, buildId, cacheDir });
+  return installed.executablePath;
 }
 
 function serveDist() {
@@ -161,12 +192,27 @@ async function main() {
       // silently. Neither flag changes anything on a workstation.
       "--no-sandbox", "--disable-dev-shm-usage",
       `--user-data-dir=${path.join(ROOT, "node_modules/.cache/prerender-profile")}`, "about:blank",
-    ], { stdio: "ignore" });
+      // stderr is CAPTURED, not ignored, and this is the whole reason the first
+      // CI attempt cost a deploy to diagnose. "browser never answered on the
+      // debugging port" is true of a missing shared library, a sandbox refusal,
+      // an exhausted /dev/shm and a binary that was never downloaded alike — and
+      // Chrome says which of those it is, on stderr, in one line. Throwing that
+      // line away turned a thirty-second fix into a guess.
+    ], { stdio: ["ignore", "ignore", "pipe"] });
+    let stderr = "";
+    chrome.stderr?.on("data", (chunk) => { stderr += chunk.toString(); });
+    chrome.on("error", (error) => { stderr += `spawn failed: ${error.message}\n`; });
+
     for (let attempt = 0; attempt < 20 && !session; attempt++) {
       await sleep(500);
       try { session = await connect(); } catch { /* still starting */ }
     }
-    if (!session) throw new Error("browser never answered on the debugging port");
+    if (!session) {
+      const said = stderr.trim().split("\n").filter(Boolean).slice(-3).join(" | ");
+      throw new Error(
+        `browser never answered on the debugging port. ${executable} said: ${said || "(nothing on stderr)"}`
+      );
+    }
     log(`PRERENDER: ${session.browser}`);
     await session.send("Page.enable");
     await session.send("Emulation.setDeviceMetricsOverride", { ...VIEWPORT, deviceScaleFactor: 1, mobile: false });
