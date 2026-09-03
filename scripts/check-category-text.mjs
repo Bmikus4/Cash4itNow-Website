@@ -51,7 +51,25 @@ const textOf = (html) =>
     .replace(/&gt;/g, ">")
     .replace(/\s+/g, " ");
 
-const shell = fs.existsSync(path.join(DIST, "index.html")) ? fs.readFileSync(path.join(DIST, "index.html")) : null;
+/*
+ * THE SHELL IS app.html, NOT index.html, and reading the wrong one turns this
+ * check into a rubber stamp for the exact page it exists to protect.
+ *
+ * The crawl now writes the home snapshot over dist/index.html, because Vercel
+ * consults the filesystem before rewrites and so answers `/` with that file. The
+ * moment it did, dist/home/index.html and dist/index.html became byte-identical
+ * — and the equality test below read that as "not snapshotted, nothing to
+ * check" and passed. A build that had prerendered the home page perfectly
+ * reported it as skipped:
+ *
+ *   CATEGORY TEXT: / was not snapshotted (shell copy) — skipped, nothing to check.
+ *
+ * app.html is the pristine shell the crawl sets aside before it overwrites
+ * anything, so comparing against it is the same test that was intended, against
+ * a file that cannot become one of the snapshots it is measuring.
+ */
+const shellPath = path.join(DIST, "app.html");
+const shell = fs.existsSync(shellPath) ? fs.readFileSync(shellPath) : null;
 
 /** The homepage fan renders the categories; /categories renders those plus the extras. */
 const TARGETS = [
