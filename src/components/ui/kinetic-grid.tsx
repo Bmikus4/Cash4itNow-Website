@@ -12,10 +12,13 @@
  *      for the rest of the session, including while scrolled far past it and
  *      while the tab was in the background. It now runs only while the host is
  *      on screen and the document is visible.
- *   3. mousemove and click were bound to `window`, which after (1) would warp the
- *      grid from pointer activity anywhere on the page, in the wrong coordinate
- *      space. They are bound to the host and converted to host-relative
- *      coordinates, and the pointer resets on leave so the warp does not stick.
+ *   3. mousemove and click used raw window coordinates, which after (1) are not
+ *      the grid's coordinate space at all. Every pointer position is converted
+ *      against the host's rect now. CLICK is bound to the host; POINTERMOVE is
+ *      bound to the window on purpose — see the note at the listeners. It was
+ *      briefly bound to the host too, and that is what made the highlight vanish
+ *      one pixel outside the grid with its influence circle still almost
+ *      entirely inside it.
  *   4. prefers-reduced-motion was not consulted at all. It now paints one static
  *      frame and starts no loop, and it re-evaluates if the setting changes.
  *
@@ -383,10 +386,28 @@ export default function KineticGrid({
     ro.observe(host);
     setSize();
 
-    // HOST-RELATIVE, and bound to the host rather than the window. Bound to the
-    // window these would warp the grid from pointer movement anywhere on the
-    // page, and after the canvas stopped being viewport-sized the coordinates
-    // would not even be in the same space as the grid.
+    /*
+     * HOST-RELATIVE COORDINATES, TRACKED ACROSS THE WHOLE WINDOW.
+     *
+     * These were bound to the host, and the note here said window-binding would
+     * "warp the grid from pointer movement anywhere on the page, in the wrong
+     * coordinate space". The second half of that stopped being true once the
+     * canvas stopped being viewport-sized and these coordinates became
+     * host-relative — subtracting the host's rect puts a pointer anywhere in the
+     * window into the grid's own space, correctly, including outside it, where
+     * the numbers simply go negative or past the width.
+     *
+     * The first half was the actual defect. Leaving the host snapped the target
+     * to (-9999,-9999) and the highlight vanished instantly — one pixel past the
+     * edge, with the influence circle still 259 of its 260 pixels over the grid.
+     * Ben: the mouse should be able to move off screen, and the highlight should
+     * only go when it is far enough that the highlight itself would be off the
+     * page.
+     *
+     * That rule needs no special case. proximity is `1 - dist/INFLUENCE_RADIUS`
+     * clamped at zero, so a pointer more than INFLUENCE_RADIUS outside the host
+     * contributes nothing on its own. Tracking it honestly IS the fade.
+     */
     const toLocal = (e: MouseEvent | PointerEvent): Point => {
       const rect = host.getBoundingClientRect();
       return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -396,10 +417,30 @@ export default function KineticGrid({
       targetMouseRef.current = toLocal(e);
     };
 
-    // Without this the warp freezes wherever the pointer left, which reads as a
-    // rendering fault rather than as a resting state.
-    const onPointerLeave = () => {
-      targetMouseRef.current = { x: -9999, y: -9999 };
+    /*
+     * LEAVING THE BROWSER WINDOW is the one case tracking cannot cover, because
+     * no more events arrive: the last position is on the viewport edge, where
+     * half the influence circle is still over the grid, and the highlight would
+     * sit there indefinitely.
+     *
+     * So the pointer is carried on in the direction it left, far enough that its
+     * influence is entirely outside the host — one radius past whichever edge it
+     * crossed. The existing lerp glides it out, which is why this looks like the
+     * pointer leaving rather than the highlight being switched off.
+     *
+     * relatedTarget === null is what distinguishes leaving the WINDOW from
+     * moving between elements inside it; every ordinary mouseout has a target.
+     */
+    const onWindowOut = (e: MouseEvent) => {
+      if (e.relatedTarget) return;
+      const rect = host.getBoundingClientRect();
+      const p = toLocal(e);
+      const beyond = INFLUENCE_RADIUS + 1;
+      if (e.clientY <= 0) p.y = -beyond;
+      else if (e.clientY >= window.innerHeight - 1) p.y = rect.height + beyond;
+      if (e.clientX <= 0) p.x = -beyond;
+      else if (e.clientX >= window.innerWidth - 1) p.x = rect.width + beyond;
+      targetMouseRef.current = p;
     };
 
     const onClick = (e: MouseEvent) => {
@@ -407,8 +448,8 @@ export default function KineticGrid({
       ripplesRef.current.push({ ...p, radius: 0, opacity: 1, born: performance.now() });
     };
 
-    host.addEventListener("pointermove", onPointerMove);
-    host.addEventListener("pointerleave", onPointerLeave);
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    document.addEventListener("mouseout", onWindowOut);
     host.addEventListener("click", onClick);
 
     const start = () => {
@@ -462,8 +503,8 @@ export default function KineticGrid({
       io.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
       reduced.removeEventListener("change", onReducedChange);
-      host.removeEventListener("pointermove", onPointerMove);
-      host.removeEventListener("pointerleave", onPointerLeave);
+      window.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("mouseout", onWindowOut);
       host.removeEventListener("click", onClick);
     };
   }, [animate, draw]);
