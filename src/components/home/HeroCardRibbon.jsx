@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   motion,
   useAnimationFrame,
@@ -20,7 +20,7 @@ import {
  * its position is a function of elapsed time and nothing else. Everything below
  * that makes the ribbon feel physical comes from driving x from a motion value
  * instead: a base drift, plus the spring-smoothed velocity of the page scroll,
- * plus the wheel when the pointer is over the cards, plus a skew taken from that
+ * plus the wheel when the pointer is over that row, plus a skew taken from that
  * same velocity. Scroll and the cards run ahead and lean; stop and they settle.
  *
  * IT IS THE ASSET, NOT A BACKGROUND. It sits where the before/after slider used
@@ -39,10 +39,18 @@ import {
  * what renders today and the swap needs no change here.
  */
 
-const CARD_W = 260;
-const CARD_H = 180;
+/**
+ * PORTRAIT, on Ben's "rotate the cards 90 degrees". The frame turns; the
+ * photographs inside do NOT. Rotating the images too would stand every object in
+ * them on its side, which is not what a rotated card means here — it is the
+ * card's proportion that changes, and object-cover re-crops each photograph to
+ * suit. 260x180 became 180x260, nothing else moved.
+ */
+const CARD_W = 180;
+const CARD_H = 260;
 const GAP = 24;
 const SPAN = CARD_W + GAP;
+const ROW_PITCH = CARD_H + GAP;
 
 /**
  * Pixels per second, and 40% slower than what it replaced, which is the number
@@ -59,6 +67,9 @@ const ROWS = [
   { speed: 64, direction: -1 },
 ];
 
+/** The band's rotation, in degrees, and the hit test below has to undo it. */
+const BAND_DEG = -22;
+
 /**
  * THE EDGES DISSOLVE, THEY DO NOT DARKEN. This was two black scrims — a flat
  * bg-black/80 on mobile and a from-black gradient on desktop — painted OVER the
@@ -72,11 +83,16 @@ const ROWS = [
  * the grid, not paint. Both axes are masked so the band dissolves on all four
  * sides rather than being cut off by the container's overflow.
  *
+ * THE FALLOFF IS SHORT, on Ben's call: the fade was 34% of the box on the left
+ * and is 8% now. Long ramps left most of the ribbon at partial alpha, so the
+ * cards read as washed out rather than as cards that end. Short ramps mean the
+ * cards are themselves almost everywhere and only let go at the very edge.
+ *
  * The two are combined with mask-composite: intersect (WebKit spells the same
  * thing source-in), so a pixel survives only where BOTH gradients keep it.
  */
-const FADE_X = "linear-gradient(to right, transparent 0%, #000 34%, #000 84%, transparent 100%)";
-const FADE_Y = "linear-gradient(to bottom, transparent 0%, #000 20%, #000 80%, transparent 100%)";
+const FADE_X = "linear-gradient(to right, transparent 0%, #000 8%, #000 94%, transparent 100%)";
+const FADE_Y = "linear-gradient(to bottom, transparent 0%, #000 7%, #000 93%, transparent 100%)";
 const DISSOLVE = {
   maskImage: `${FADE_X}, ${FADE_Y}`,
   WebkitMaskImage: `${FADE_X}, ${FADE_Y}`,
@@ -89,9 +105,46 @@ const DISSOLVE = {
 };
 
 /** Fades each row out along its own direction of travel, before the box mask. */
-const ROW_FADE = "linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%)";
+const ROW_FADE = "linear-gradient(to right, transparent 0%, #000 4%, #000 96%, transparent 100%)";
 
-function Ribbon({ items, speed, direction, wheelOffset, reduceMotion }) {
+/**
+ * Which row, if any, is under a page-space point.
+ *
+ * IT IS ARITHMETIC RATHER THAN HIT-TESTING because the ribbon is
+ * pointer-events:none and has to stay that way: the mask makes cards invisible
+ * near the edges WITHOUT making them untouchable, so anything relying on the
+ * browser's own hit-testing would let a card nobody can see swallow a click.
+ * getBoundingClientRect is no use either — the rows are rotated, so all three
+ * axis-aligned boxes overlap almost completely and every point would match every
+ * row.
+ *
+ * So the point is rotated back into the band's own coordinates, where the rows
+ * are plain horizontal strips. A point in the GAP between two rows belongs to
+ * neither, which is deliberate: the wheel is only captured over a row, so the
+ * page still scrolls from the space between them.
+ */
+function rowAtPoint(clientX, clientY, band) {
+  if (!band) return -1;
+  const rect = band.getBoundingClientRect();
+  const dx = clientX - (rect.left + rect.right) / 2;
+  const dy = clientY - (rect.top + rect.bottom) / 2;
+  const t = (-BAND_DEG * Math.PI) / 180;
+  const cos = Math.cos(t);
+  const sin = Math.sin(t);
+  const localX = dx * cos - dy * sin;
+  const localY = dx * sin + dy * cos;
+
+  const width = band.offsetWidth;
+  const height = band.offsetHeight;
+  if (Math.abs(localX) > width / 2 || Math.abs(localY) > height / 2) return -1;
+
+  const fromTop = localY + height / 2;
+  const index = Math.floor(fromTop / ROW_PITCH);
+  if (index < 0 || index >= ROWS.length) return -1;
+  return fromTop - index * ROW_PITCH <= CARD_H ? index : -1;
+}
+
+function Ribbon({ items, speed, direction, index, paused, register, reduceMotion }) {
   const baseX = useMotionValue(0);
   const { scrollY } = useScroll();
   const scrollVelocity = useVelocity(scrollY);
@@ -106,24 +159,46 @@ function Ribbon({ items, speed, direction, wheelOffset, reduceMotion }) {
   const velocityFactor = useTransform(smoothVelocity, [-2200, 2200], [-4, 4], { clamp: false });
   const skew = useTransform(smoothVelocity, [-2200, 2200], [5, -5], { clamp: false });
 
+  // THIS ROW'S OWN WHEEL, not one shared by all three. Ben: scrolling should work
+  // per-row. The parent hit-tests the pointer and pushes deltas into whichever
+  // row is under it, through the callback registered here.
+  const wheelRaw = useMotionValue(0);
+  const wheelOffset = useSpring(wheelRaw, { damping: 40, stiffness: 220, mass: 0.6 });
+  useEffect(
+    () => register(index, (delta) => wheelRaw.set(wheelRaw.get() + delta)),
+    [index, register, wheelRaw]
+  );
+
+  // Read through a ref inside the frame loop: useAnimationFrame holds the
+  // callback it was given, so a prop read directly would be the value from the
+  // render that installed it.
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+
   // Two copies of the list, wrapped over exactly one copy's width, so the seam
   // is never visible and the loop needs no measurement of the DOM.
   const half = items.length * SPAN;
   const x = useTransform(baseX, (v) => `${wrap(-half, 0, v)}px`);
 
-  // The wheel offset is shared by all three rows and only its CHANGE is consumed,
-  // so a row that mounts late does not jump by the whole accumulated total.
   const lastWheel = useRef(0);
 
   useAnimationFrame((_t, delta) => {
     if (reduceMotion) return;
-    const seconds = delta / 1000;
-    let moveBy = direction * speed * seconds;
-    // Scroll velocity scales the drift rather than adding to it, so a flick
-    // accelerates the ribbon in the direction it is already going instead of
-    // fighting it, and a hard enough flick reverses it.
-    moveBy += moveBy * velocityFactor.get();
 
+    // Hovering a card stops THAT row and nothing else, which is the point of it:
+    // the drift is what makes a card hard to look at, and stopping every row
+    // would read as the whole thing breaking rather than as one row waiting.
+    let moveBy = 0;
+    if (!pausedRef.current) {
+      moveBy = direction * speed * (delta / 1000);
+      // Scroll velocity scales the drift rather than adding to it, so a flick
+      // accelerates the ribbon in the direction it is already going instead of
+      // fighting it, and a hard enough flick reverses it.
+      moveBy += moveBy * velocityFactor.get();
+    }
+
+    // The wheel keeps working while a row is paused — stopping the drift is what
+    // makes scrubbing it by hand useful in the first place.
     const wheeled = wheelOffset.get();
     moveBy += direction * (wheeled - lastWheel.current);
     lastWheel.current = wheeled;
@@ -156,36 +231,36 @@ function Ribbon({ items, speed, direction, wheelOffset, reduceMotion }) {
 
 export default function HeroCardRibbon({ items }) {
   const reduceMotion = useReducedMotion();
-  const boxRef = useRef(null);
+  const bandRef = useRef(null);
+  const pushers = useRef([]);
+  const [hovered, setHovered] = useState(-1);
 
-  // Raw accumulated wheel distance, then sprung, so a scrub over the cards has
-  // the same weight as a scroll flick rather than snapping frame to frame.
-  const wheelRaw = useMotionValue(0);
-  const wheelOffset = useSpring(wheelRaw, { damping: 40, stiffness: 220, mass: 0.6 });
+  const register = useCallback((index, push) => {
+    pushers.current[index] = push;
+  }, []);
 
   /*
-   * THE WHEEL OVER THE CARDS MOVES THE CARDS, AND THE PAGE STAYS PUT. Ben's
-   * ask. It is a window listener rather than a handler on the ribbon because
-   * the ribbon is pointer-events:none and must stay that way — six repeated
-   * images must never swallow a click meant for the CTA — and a wheel event
-   * over a pointer-events:none element is delivered to whatever is underneath,
-   * so there is nothing to attach to. Hit-testing the rect gives the same
-   * result without touching pointer-events at all.
+   * THE WHEEL OVER A ROW MOVES THAT ROW, AND THE PAGE STAYS PUT. Ben's ask,
+   * twice: first that the window not scroll over the cards, then that it work
+   * per-row. It is a window listener rather than a handler on the ribbon because
+   * the ribbon is pointer-events:none and must stay that way — six repeats of
+   * the same photographs must never swallow a click meant for the CTA, and the
+   * mask makes cards invisible without making them untouchable, so an unseen
+   * card would be the one catching it. A wheel event over a pointer-events:none
+   * element is delivered to whatever is underneath, so there is nothing to bind
+   * to anyway.
    *
-   * THE REGION IS THE RIBBON'S BOX: the right 62% of the hero, full height. It
-   * was going to be the rotated band's own rect, until measuring showed the two
-   * are the same thing — a 190%-wide row rotated 22 degrees has a bounding box
-   * taller than the hero, so intersecting with it clips nothing. THE TRADE THIS
-   * MAKES IS REAL AND DELIBERATE: with the cursor on the right-hand side of the
-   * hero there is no way to scroll the page, only the cards; the visitor has to
-   * move left. That is the behaviour Ben asked for, not an oversight to correct.
+   * NOT CAPTURED BETWEEN THE ROWS. rowAtPoint returns -1 in the gaps and off the
+   * band, and the page scrolls normally there — which is what keeps a
+   * full-height hero from trapping a visitor whose cursor happens to be on the
+   * right-hand side.
    *
-   * passive:false is required — a passive listener cannot preventDefault, and
-   * Chrome makes wheel listeners passive by default. Without it the page scrolls
+   * passive:false is required. Chrome makes wheel listeners passive by default,
+   * a passive listener cannot preventDefault, and without it the page scrolls
    * anyway and the whole thing silently does nothing.
    *
    * TOUCH IS DELIBERATELY EXCLUDED. Blocking touchmove over a band that spans
-   * the full width on a phone would leave no way to scroll past the hero.
+   * the full width of a phone would leave no way to reach the rest of the page.
    */
   useEffect(() => {
     if (reduceMotion) return undefined;
@@ -193,19 +268,25 @@ export default function HeroCardRibbon({ items }) {
     if (!window.matchMedia?.("(hover: hover) and (pointer: fine)").matches) return undefined;
 
     const onWheel = (event) => {
-      const box = boxRef.current?.getBoundingClientRect();
-      if (!box) return;
-      const inside =
-        event.clientX >= box.left && event.clientX <= box.right &&
-        event.clientY >= box.top && event.clientY <= box.bottom;
-      if (!inside) return;
+      const index = rowAtPoint(event.clientX, event.clientY, bandRef.current);
+      if (index < 0) return;
       event.preventDefault();
-      wheelRaw.set(wheelRaw.get() + event.deltaY);
+      pushers.current[index]?.(event.deltaY);
     };
+    const onMove = (event) => {
+      setHovered(rowAtPoint(event.clientX, event.clientY, bandRef.current));
+    };
+    const onLeave = () => setHovered(-1);
 
     window.addEventListener("wheel", onWheel, { passive: false });
-    return () => window.removeEventListener("wheel", onWheel);
-  }, [reduceMotion, wheelRaw]);
+    window.addEventListener("mousemove", onMove, { passive: true });
+    document.addEventListener("mouseleave", onLeave);
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseleave", onLeave);
+    };
+  }, [reduceMotion]);
 
   if (!items?.length) return null;
 
@@ -220,8 +301,7 @@ export default function HeroCardRibbon({ items }) {
      * the ribbon is BEHIND the copy rather than beside it, the only ways to keep
      * white type readable over a brightly lit photograph of silverware are to
      * cover the photograph or to have less of it. Covering it is what hid the
-     * grid, so the cards are ghosted to a quarter instead and the grid reads
-     * through them.
+     * grid, so the cards are ghosted instead and the grid reads through them.
      *
      * IT RAMPS OVER THREE BREAKPOINTS, and every step was screenshotted rather
      * than chosen. The reason it cannot be one step is that the ribbon's width
@@ -235,22 +315,30 @@ export default function HeroCardRibbon({ items }) {
      * breakpoints. They were one until this was screenshotted at 768.
      */
     <div
-      ref={boxRef}
       aria-hidden="true"
       className="pointer-events-none absolute inset-y-0 right-0 z-0 w-full overflow-hidden opacity-25 md:w-[62%] lg:opacity-60 xl:opacity-100"
       style={DISSOLVE}
     >
-      <div className="absolute left-1/2 top-1/2 w-[190%] -translate-x-1/2 -translate-y-1/2 rotate-[-22deg]">
+      <div
+        ref={bandRef}
+        className="absolute left-1/2 top-1/2 w-[190%]"
+        /* The transform is written out rather than composed from Tailwind
+           classes because rowAtPoint has to undo exactly this rotation, and
+           BAND_DEG is the one place the angle is stated. */
+        style={{ transform: `translate(-50%, -50%) rotate(${BAND_DEG}deg)` }}
+      >
         <div className="flex flex-col" style={{ gap: GAP }}>
           {ROWS.map((row, i) => (
             <Ribbon
               key={i}
+              index={i}
               /* Offsetting the start of each row stops the three from lining up
                  into one visible column of edges. */
               items={[...items.slice(i), ...items.slice(0, i)]}
               speed={row.speed}
               direction={row.direction}
-              wheelOffset={wheelOffset}
+              paused={hovered === i}
+              register={register}
               reduceMotion={reduceMotion}
             />
           ))}
