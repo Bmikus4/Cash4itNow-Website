@@ -18,8 +18,23 @@
  * the bundle.
  */
 
-/** The platform: leads and the public sales feed. A separate Vercel project. */
-export const DEFAULT_API_ORIGIN = "https://cash4itnow.vercel.app";
+/**
+ * The platform: leads, the public sales feed and published catalogs. A separate
+ * Vercel project.
+ *
+ * NOT `cash4itnow.vercel.app`. That was the first-generation catalog builder and
+ * its deployment is GONE — every path on it answers Vercel's own 404, "The
+ * deployment could not be found", so the site was pointed at a host that cannot
+ * fail loudly enough to be noticed: the sales GET returns a 404 body, the reader
+ * classifies it as degraded, and the home page shows "we could not load the
+ * sales list" forever. Confirmed 2026-09-03 against both hosts.
+ *
+ * The live project is `cash4itnow-platform`, and it has been ready the whole
+ * time: /api/public/sales answers 200 {"upcoming":[],"past":[]}, /api/public/lead
+ * is POST-only, /api/public/catalog refuses an unpublished slug by name, and its
+ * PUBLIC_FORM_ORIGINS already allowlists www.cash4itnow.com and the apex.
+ */
+export const DEFAULT_API_ORIGIN = "https://cash4itnow-platform.vercel.app";
 
 /** Where visitors are: the canonical public origin, used for absolute share URLs. */
 export const DEFAULT_SITE_ORIGIN = "https://www.cash4itnow.com";
