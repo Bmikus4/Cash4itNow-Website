@@ -88,6 +88,42 @@
     @apply bg-background text-foreground;
     font-family: var(--font-body);
   }
+
+  /*
+   * IN-PAGE JUMPS ARE SMOOTH, AND IT IS DONE HERE RATHER THAN PER BUTTON.
+   *
+   * Every same-page link on the site is a plain href="#id" — the hero's "How We
+   * Get It Done" and /for-professionals' referral link today, and whatever is
+   * added next. Handling this in one CSS rule means a new anchor is smooth by
+   * existing, instead of smooth only if whoever adds it remembers a scroll
+   * handler. A JS handler would also have to be written per link, would fight
+   * react-router, and would be one more thing to keep correct.
+   */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /*
+   * The navbar is fixed at 64px, 72px from md up, so an element scrolled to the
+   * top of the viewport lands UNDERNEATH it. scroll-margin reserves the space.
+   * Applied to anything with an id on purpose: it costs nothing where it is not
+   * used, and it is also the right offset for a form field the browser scrolls
+   * into view on validation, which has the same problem for the same reason.
+   */
+  [id] {
+    scroll-margin-top: 5.5rem;
+  }
+}
+
+/*
+ * Outside @layer base so it cannot be overridden by a later base rule, and
+ * because "reduce" here means what it says: someone who has asked the OS to stop
+ * animating things should get an instant jump, not a slower one.
+ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 @layer utilities {
