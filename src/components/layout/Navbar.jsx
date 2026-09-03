@@ -14,7 +14,7 @@ const navLinks = [
   { label: "Home", path: "/" },
   { label: "What We Buy", path: "/categories" },
   { label: "Upcoming Sales", path: "/upcoming-sales" },
-  { label: "For Sale", path: "/for-sale" },
+  { label: "Shop", path: "/shop" },
   { label: "Our Story", path: "/about" },
   { label: "Contact", path: "/contact" },
 ];

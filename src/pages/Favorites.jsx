@@ -5,7 +5,7 @@ import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { fetchInventory, INVENTORY_QUERY_KEY } from "@/api/inventoryClient";
 import { useFavorites } from "@/lib/FavoritesContext";
-import ForSaleItemCard from "@/components/forsale/ForSaleItemCard";
+import ShopItemCard from "@/components/shop/ShopItemCard";
 import { usePageMeta } from "@/lib/usePageMeta";
 
 export default function Favorites() {
@@ -16,7 +16,7 @@ export default function Favorites() {
   usePageMeta({
     title: "Saved Items",
     description:
-      "The items you have saved from the Cash 4 It Now for-sale list, kept on this device and ready when you are.",
+      "The items you have saved from the Cash 4 It Now shop, kept on this device and ready when you are.",
     robots: "noindex, follow",
   });
   const { favorites } = useFavorites();
@@ -66,16 +66,16 @@ export default function Favorites() {
               <p className="font-heading font-black text-3xl uppercase text-muted-foreground">No saved items yet</p>
               <p className="text-muted-foreground mt-2">Browse items and tap the heart to save them here.</p>
               <Link
-                to="/for-sale"
+                to="/shop"
                 className="mt-6 inline-block bg-accent text-white font-heading font-black text-sm uppercase tracking-widest px-6 py-3 hover:bg-accent/90 transition-colors"
               >
-                Browse For Sale
+                Browse the Shop
               </Link>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {favoriteItems.map((item, i) => (
-                <ForSaleItemCard key={item.id} item={item} index={i} />
+                <ShopItemCard key={item.id} item={item} index={i} />
               ))}
             </div>
           )}

@@ -56,7 +56,7 @@ export default function Footer() {
               {[
                 { label: "Home", path: "/" },
                 { label: "Upcoming Sales", path: "/upcoming-sales" },
-                { label: "For Sale", path: "/for-sale" },
+                { label: "Shop", path: "/shop" },
                 { label: "What We Buy", path: "/categories" },
                 { label: "Our Story", path: "/about" },
                 // Footer, not the top nav. Every page linking to /blog is what

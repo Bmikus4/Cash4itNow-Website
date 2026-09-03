@@ -164,7 +164,7 @@ export default function CartDrawer({ onClose }) {
                 <div className="text-center py-16">
                   <ShoppingCart className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
                   <p className="font-heading font-black text-xl uppercase text-muted-foreground">Cart is empty</p>
-                  <p className="text-muted-foreground text-sm mt-2">Add items from the For Sale page.</p>
+                  <p className="text-muted-foreground text-sm mt-2">Add items from the Shop page.</p>
                 </div>
               ) : (
                 <div className="space-y-3">

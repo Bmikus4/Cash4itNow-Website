@@ -1,12 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "vite build",
+  "redirects": [
+    { "source": "/for-sale", "destination": "/shop", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/", "destination": "/home/index.html" },
     { "source": "/categories", "destination": "/categories/index.html" },
     { "source": "/about", "destination": "/about/index.html" },
     { "source": "/contact", "destination": "/contact/index.html" },
-    { "source": "/for-sale", "destination": "/for-sale/index.html" },
+    { "source": "/shop", "destination": "/shop/index.html" },
     { "source": "/upcoming-sales", "destination": "/upcoming-sales/index.html" },
     { "source": "/for-professionals", "destination": "/for-professionals/index.html" },
     { "source": "/favorites", "destination": "/favorites/index.html" },
