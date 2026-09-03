@@ -5,10 +5,36 @@ import { Phone, ArrowDown, ChevronRight, ArrowRight, Calendar, Images } from "lu
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
 import HeroLeadForm from "@/components/home/HeroLeadForm";
+import HeroCardRibbon from "@/components/home/HeroCardRibbon";
 import KineticGrid from "@/components/ui/kinetic-grid";
 import { salesQuery, saleDateRange, saleLocation } from "@/api/salesClient";
 import { isDegraded, isSnapshot } from "@/api/salesWire";
 import { readCatalog, CATALOG_ITEMS, CATALOG_PENDING } from "@/api/catalogChannel";
+
+/**
+ * WHAT FILLS THE RIBBON WHEN NO CATALOG HAS ITEMS IN IT.
+ *
+ * The standing inventory, and these are the business's own photographs rather
+ * than stock: the same nine files /categories uses for the matching category, so
+ * the hero shows things this business actually buys and costs no new bytes.
+ * Landscapes from a stock library would be actively wrong on a page whose entire
+ * claim is "this is the kind of thing we deal in".
+ *
+ * Neither hero-before.webp nor hero-after.webp is here. Dealing one of the
+ * removed hero image's photographs back onto the same screen is not what
+ * removing it meant.
+ */
+const STANDING_ITEMS = [
+  { id: "toys", imageUrl: "/img/3065f1e9c_generated_image.webp" },
+  { id: "griswold", imageUrl: "/img/96588d74a_generated_image.webp" },
+  { id: "jewelry", imageUrl: "/img/f3522ea84_generated_image.webp" },
+  { id: "uranium", imageUrl: "/img/2f04db7ab_generated_image.webp" },
+  { id: "cards", imageUrl: "/img/b72c0acb4_generated_image.webp" },
+  { id: "decor", imageUrl: "/img/2ac325373_generated_image.webp" },
+  { id: "pipes", imageUrl: "/img/ac93609f7_generated_image.webp" },
+  { id: "pens", imageUrl: "/img/63ce2e7e9_generated_image.webp" },
+  { id: "uv", imageUrl: "/img/0bf12dc53_generated_image.webp" },
+];
 
 /**
  * ONE HERO, on the kinetic grid.
@@ -21,8 +47,9 @@ import { readCatalog, CATALOG_ITEMS, CATALOG_PENDING } from "@/api/catalogChanne
  * "this should overlay the kinetic grid" means.
  *
  * The before/after slider that used to live here is gone for good (Ben, "remove
- * the hero image from the website"), and so is the marquee that briefly replaced
- * it — that component is now its own band below, in InventoryMarquee.
+ * the hero image from the website"). The vendored CSS marquee that briefly
+ * replaced it is gone too: it could not be coupled to scroll velocity, which is
+ * what "rubbery" needed, so HeroCardRibbon replaces it as the hero's asset.
  *
  * BeforeAfterSlider.jsx STAYS: /for-professionals renders its own before/after
  * with it, so deleting it to tidy up would break that page.
@@ -80,6 +107,22 @@ export default function HeroSection() {
   const dates = sale ? saleDateRange(sale, format) : "";
   const where = sale ? saleLocation(sale) : "";
 
+  /*
+   * Real catalog photographs the moment the platform publishes any, the standing
+   * inventory until then — Ben's "the current items if no catalogs exist, but new
+   * catalog items when catalogs arrive".
+   *
+   * Only CATALOG_ITEMS qualifies. A catalog in the PENDING state has told us how
+   * many items it holds and sent none of them, which is exactly today's live
+   * shape ({slug, itemCount}), and there is nothing to put in a card. Falling
+   * back is right there: an empty ribbon would be a worse answer than the
+   * standing one, and a placeholder card per promised item would be inventing
+   * photographs the feed never sent.
+   */
+  const published = sale ? readCatalog(sale.catalog) : null;
+  const ribbonItems =
+    published?.state === CATALOG_ITEMS && published.items.length ? published.items : STANDING_ITEMS;
+
   const rise = (delay) =>
     reduceMotion
       ? {}
@@ -87,9 +130,12 @@ export default function HeroSection() {
 
   return (
     <KineticGrid globalColor="monochrome" className="min-h-[100dvh]">
-      <div className="min-h-[100dvh] flex items-center px-6 md:px-10 pt-24 pb-20">
+      {/* The hero's image asset, beside the type rather than behind it. */}
+      <HeroCardRibbon items={ribbonItems} />
+
+      <div className="relative z-10 min-h-[100dvh] flex items-center px-6 md:px-10 pt-24 pb-20">
         <div className="max-w-7xl mx-auto w-full">
-          <div className="max-w-3xl">
+          <div className="max-w-2xl">
             <motion.div
               {...rise(0.1)}
               className="inline-flex items-center gap-2 bg-accent text-white px-4 py-2 mb-8"
@@ -139,16 +185,27 @@ export default function HeroSection() {
                   <ChevronRight className="w-5 h-5" />
                 </button>
               )}
-              {/* Smooth by CSS, not by a handler here. See the html rule in
-                  src/index.css and the scroll-margin that clears the fixed nav. */}
-              <a
-                href="#services"
-                className="inline-flex items-center justify-center gap-2 border-2 border-accent text-accent px-8 py-5 font-heading font-bold text-lg uppercase tracking-wide hover:bg-accent hover:text-white transition-colors"
-              >
-                How We Get It Done
-                <ArrowDown className="w-5 h-5" />
-              </a>
             </motion.div>
+
+            {/*
+              A LINK, NOT A THIRD BUTTON. Three buttons of three different widths
+              wrapped two-and-one in the narrower column this hero now uses, which
+              is the exact fault docs/UI-PRINCIPLES.md §9 recorded against the old
+              hero. Ben's own markup of the page shows two buttons. So the two
+              that convert stay buttons and the one that only moves you down the
+              page becomes what it always was.
+
+              Smooth by CSS rather than a handler here: see the html rule in
+              src/index.css and the scroll-margin that clears the fixed nav.
+            */}
+            <motion.a
+              {...rise(0.58)}
+              href="#services"
+              className="mt-6 inline-flex items-center gap-2 font-heading font-bold text-sm uppercase tracking-widest text-white/70 hover:text-accent transition-colors"
+            >
+              How We Get It Done
+              <ArrowDown className="w-4 h-4" />
+            </motion.a>
 
             {showForm && (
               <div className="mt-6 max-w-lg">

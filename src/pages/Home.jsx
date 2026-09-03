@@ -1,6 +1,5 @@
 import React from "react";
 import HeroSection from "../components/home/HeroSection";
-import InventoryMarquee from "../components/home/InventoryMarquee";
 import CategoriesPreview from "../components/home/CategoriesPreview";
 import HowItWorksSection from "../components/home/HowItWorksSection";
 import CtaSection from "../components/home/CtaSection";
@@ -27,9 +26,6 @@ export default function Home() {
           SALES_QUERY_KEY with UpcomingSalesSection below, so the two cost one
           request between them rather than asking the platform twice. */}
       <HeroSection />
-      {/* A 55vh band, not a second full screen: the marquee introduces the
-          categories that What We Buy then lists in text. */}
-      <InventoryMarquee />
       <UpcomingSalesSection />
       <CategoriesPreview />
       <HowItWorksSection />
