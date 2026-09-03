@@ -74,6 +74,18 @@ worth writing down because nothing about it is guessable from the repo:
   default is `~/.cache/puppeteer`, which Vercel does not restore, so it would be
   re-fetched on every deploy. `browserExecutable()` reads the directory out of
   that file rather than repeating the path, so the two cannot drift.
+- **On Linux the browser is `@sparticuz/chromium`, not Chrome for Testing.**
+  Puppeteer's Chromium downloads and installs perfectly on a Vercel builder and
+  then will not start:
+  ```
+  .../chrome-linux64/chrome: error while loading shared libraries:
+  libnspr4.so: cannot open shared object file: No such file or directory
+  ```
+  The image carries no NSS/NSPR and a Vercel build cannot install system
+  packages that persist. `@sparticuz/chromium` is a Chromium built for Amazon
+  Linux with those libraries beside it. Its own `args` are used too, minus
+  `--single-process`: that flag is right for Lambda and makes the browser refuse
+  to open a second target, which is what `/json/new` asks for on every route.
 - **`--no-sandbox` and `--disable-dev-shm-usage`.** The build container runs as
   root, where Chrome's sandbox refuses to start; and its `/dev/shm` is 64MB,
   which the renderer exhausts mid-crawl.

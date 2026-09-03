@@ -56,11 +56,40 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * wins, so a machine with its own Chrome need not download a second one.
  */
 async function browserExecutable() {
-  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+  if (process.env.CHROME_PATH) return { executable: process.env.CHROME_PATH, extraArgs: [] };
+
+  /*
+   * ON LINUX THE BROWSER COMES FROM @sparticuz/chromium, NOT FROM PUPPETEER, and
+   * this is not a preference. Chrome for Testing downloads and installs fine on
+   * a Vercel builder and then will not start:
+   *
+   *   .../chrome-linux64/chrome: error while loading shared libraries:
+   *   libnspr4.so: cannot open shared object file: No such file or directory
+   *
+   * The build image carries no NSS/NSPR, and nothing in a Vercel build may
+   * install system packages that persist. @sparticuz/chromium exists for exactly
+   * this: a Chromium built for Amazon Linux with those libraries bundled beside
+   * it. It costs one extra devDependency and removes the entire class of
+   * missing-.so failures.
+   *
+   * Its own args come with it because they encode the same environment
+   * knowledge. --single-process is dropped: it is in that list for Lambda, and
+   * it makes the browser refuse to open a second target, which is precisely what
+   * /json/new asks for on every route.
+   */
+  if (process.platform === "linux") {
+    const { default: chromium } = await import("@sparticuz/chromium");
+    chromium.setGraphicsMode = false;
+    return {
+      executable: await chromium.executablePath(),
+      extraArgs: (chromium.args || []).filter((arg) => arg !== "--single-process"),
+    };
+  }
+
   const { default: puppeteer } = await import("puppeteer");
   // v25 returns a promise here where older versions returned a string.
   const executable = await puppeteer.executablePath();
-  if (fs.existsSync(executable)) return executable;
+  if (fs.existsSync(executable)) return { executable, extraArgs: [] };
 
   /*
    * THE DOWNLOAD IS DONE HERE, NOT BY PUPPETEER'S POSTINSTALL, because Vercel's
@@ -88,7 +117,7 @@ async function browserExecutable() {
   const buildId = await resolveBuildId(Browser.CHROME, platform, "stable");
   log(`PRERENDER: no browser on disk — fetching Chrome ${buildId} for ${platform} into ${path.relative(ROOT, cacheDir)}`);
   const installed = await install({ browser: Browser.CHROME, platform, buildId, cacheDir });
-  return installed.executablePath;
+  return { executable: installed.executablePath, extraArgs: [] };
 }
 
 function serveDist() {
@@ -182,9 +211,10 @@ async function main() {
   let session;
   const server = await serveDist();
   try {
-    const executable = await browserExecutable();
+    const { executable, extraArgs } = await browserExecutable();
     if (!fs.existsSync(executable)) throw new Error(`no browser at ${executable} (override with CHROME_PATH)`);
     chrome = spawn(executable, [
+      ...extraArgs,
       "--headless=new", "--disable-gpu", `--remote-debugging-port=${CDP_PORT}`,
       // CI only, and both are required there rather than tuning. Vercel's build
       // container runs as root, where Chrome's sandbox refuses to start at all,
