@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
   motion,
   useAnimationFrame,
@@ -20,8 +20,8 @@ import {
  * its position is a function of elapsed time and nothing else. Everything below
  * that makes the ribbon feel physical comes from driving x from a motion value
  * instead: a base drift, plus the spring-smoothed velocity of the page scroll,
- * plus a skew taken from that same velocity. Scroll down and the cards run ahead
- * and lean; stop and they settle back. That is the rubber.
+ * plus the wheel when the pointer is over the cards, plus a skew taken from that
+ * same velocity. Scroll and the cards run ahead and lean; stop and they settle.
  *
  * IT IS THE ASSET, NOT A BACKGROUND. It sits where the before/after slider used
  * to, in the right half of the hero, rather than as a full-bleed layer behind the
@@ -59,10 +59,39 @@ const ROWS = [
   { speed: 64, direction: -1 },
 ];
 
-/** Fades the ribbon out where it ends, along the direction of travel. */
-const EDGE_FADE = "linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%)";
+/**
+ * THE EDGES DISSOLVE, THEY DO NOT DARKEN. This was two black scrims — a flat
+ * bg-black/80 on mobile and a from-black gradient on desktop — painted OVER the
+ * ribbon to keep white type legible across it. They worked, and they were wrong
+ * the moment the kinetic grid went in behind the hero: a black scrim hides the
+ * grid just as effectively as it hides the cards, so the left half of the hero
+ * was a black rectangle sitting on top of the thing it was meant to sit in.
+ *
+ * A MASK is the fix rather than another overlay, because a mask removes the
+ * cards instead of covering them — what shows through where the ribbon fades is
+ * the grid, not paint. Both axes are masked so the band dissolves on all four
+ * sides rather than being cut off by the container's overflow.
+ *
+ * The two are combined with mask-composite: intersect (WebKit spells the same
+ * thing source-in), so a pixel survives only where BOTH gradients keep it.
+ */
+const FADE_X = "linear-gradient(to right, transparent 0%, #000 34%, #000 84%, transparent 100%)";
+const FADE_Y = "linear-gradient(to bottom, transparent 0%, #000 20%, #000 80%, transparent 100%)";
+const DISSOLVE = {
+  maskImage: `${FADE_X}, ${FADE_Y}`,
+  WebkitMaskImage: `${FADE_X}, ${FADE_Y}`,
+  maskComposite: "intersect",
+  WebkitMaskComposite: "source-in",
+  maskSize: "100% 100%",
+  WebkitMaskSize: "100% 100%",
+  maskRepeat: "no-repeat",
+  WebkitMaskRepeat: "no-repeat",
+};
 
-function Ribbon({ items, speed, direction, reduceMotion }) {
+/** Fades each row out along its own direction of travel, before the box mask. */
+const ROW_FADE = "linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%)";
+
+function Ribbon({ items, speed, direction, wheelOffset, reduceMotion }) {
   const baseX = useMotionValue(0);
   const { scrollY } = useScroll();
   const scrollVelocity = useVelocity(scrollY);
@@ -82,6 +111,10 @@ function Ribbon({ items, speed, direction, reduceMotion }) {
   const half = items.length * SPAN;
   const x = useTransform(baseX, (v) => `${wrap(-half, 0, v)}px`);
 
+  // The wheel offset is shared by all three rows and only its CHANGE is consumed,
+  // so a row that mounts late does not jump by the whole accumulated total.
+  const lastWheel = useRef(0);
+
   useAnimationFrame((_t, delta) => {
     if (reduceMotion) return;
     const seconds = delta / 1000;
@@ -90,11 +123,16 @@ function Ribbon({ items, speed, direction, reduceMotion }) {
     // accelerates the ribbon in the direction it is already going instead of
     // fighting it, and a hard enough flick reverses it.
     moveBy += moveBy * velocityFactor.get();
+
+    const wheeled = wheelOffset.get();
+    moveBy += direction * (wheeled - lastWheel.current);
+    lastWheel.current = wheeled;
+
     baseX.set(baseX.get() + moveBy);
   });
 
   return (
-    <div className="overflow-hidden" style={{ maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}>
+    <div className="overflow-hidden" style={{ maskImage: ROW_FADE, WebkitMaskImage: ROW_FADE }}>
       <motion.div className="flex" style={{ x, gap: GAP, skewX: reduceMotion ? 0 : skew }}>
         {[...items, ...items].map((item, i) => (
           <div
@@ -118,6 +156,57 @@ function Ribbon({ items, speed, direction, reduceMotion }) {
 
 export default function HeroCardRibbon({ items }) {
   const reduceMotion = useReducedMotion();
+  const boxRef = useRef(null);
+
+  // Raw accumulated wheel distance, then sprung, so a scrub over the cards has
+  // the same weight as a scroll flick rather than snapping frame to frame.
+  const wheelRaw = useMotionValue(0);
+  const wheelOffset = useSpring(wheelRaw, { damping: 40, stiffness: 220, mass: 0.6 });
+
+  /*
+   * THE WHEEL OVER THE CARDS MOVES THE CARDS, AND THE PAGE STAYS PUT. Ben's
+   * ask. It is a window listener rather than a handler on the ribbon because
+   * the ribbon is pointer-events:none and must stay that way — six repeated
+   * images must never swallow a click meant for the CTA — and a wheel event
+   * over a pointer-events:none element is delivered to whatever is underneath,
+   * so there is nothing to attach to. Hit-testing the rect gives the same
+   * result without touching pointer-events at all.
+   *
+   * THE REGION IS THE RIBBON'S BOX: the right 62% of the hero, full height. It
+   * was going to be the rotated band's own rect, until measuring showed the two
+   * are the same thing — a 190%-wide row rotated 22 degrees has a bounding box
+   * taller than the hero, so intersecting with it clips nothing. THE TRADE THIS
+   * MAKES IS REAL AND DELIBERATE: with the cursor on the right-hand side of the
+   * hero there is no way to scroll the page, only the cards; the visitor has to
+   * move left. That is the behaviour Ben asked for, not an oversight to correct.
+   *
+   * passive:false is required — a passive listener cannot preventDefault, and
+   * Chrome makes wheel listeners passive by default. Without it the page scrolls
+   * anyway and the whole thing silently does nothing.
+   *
+   * TOUCH IS DELIBERATELY EXCLUDED. Blocking touchmove over a band that spans
+   * the full width on a phone would leave no way to scroll past the hero.
+   */
+  useEffect(() => {
+    if (reduceMotion) return undefined;
+    if (typeof window === "undefined") return undefined;
+    if (!window.matchMedia?.("(hover: hover) and (pointer: fine)").matches) return undefined;
+
+    const onWheel = (event) => {
+      const box = boxRef.current?.getBoundingClientRect();
+      if (!box) return;
+      const inside =
+        event.clientX >= box.left && event.clientX <= box.right &&
+        event.clientY >= box.top && event.clientY <= box.bottom;
+      if (!inside) return;
+      event.preventDefault();
+      wheelRaw.set(wheelRaw.get() + event.deltaY);
+    };
+
+    window.addEventListener("wheel", onWheel, { passive: false });
+    return () => window.removeEventListener("wheel", onWheel);
+  }, [reduceMotion, wheelRaw]);
+
   if (!items?.length) return null;
 
   return (
@@ -126,10 +215,19 @@ export default function HeroCardRibbon({ items }) {
      * per row across three rows, so without this a screen reader reads the same
      * handful of images six times over before reaching the headline — and the
      * cards must never eat a click meant for the CTA underneath them.
+     *
+     * opacity below md is the mobile half of the legibility problem the black
+     * scrim used to solve. There is no beside on a phone: the ribbon is directly
+     * BEHIND the copy, and the only ways to keep white type readable over a
+     * brightly lit photograph of silverware are to cover the photograph or to
+     * make less of it. Covering it is what hid the grid, so the cards are ghosted
+     * to a quarter instead and the grid reads through them.
      */
     <div
+      ref={boxRef}
       aria-hidden="true"
-      className="pointer-events-none absolute inset-y-0 right-0 z-0 w-full overflow-hidden md:w-[62%]"
+      className="pointer-events-none absolute inset-y-0 right-0 z-0 w-full overflow-hidden opacity-25 md:w-[62%] md:opacity-100"
+      style={DISSOLVE}
     >
       <div className="absolute left-1/2 top-1/2 w-[190%] -translate-x-1/2 -translate-y-1/2 rotate-[-22deg]">
         <div className="flex flex-col" style={{ gap: GAP }}>
@@ -141,23 +239,12 @@ export default function HeroCardRibbon({ items }) {
               items={[...items.slice(i), ...items.slice(0, i)]}
               speed={row.speed}
               direction={row.direction}
+              wheelOffset={wheelOffset}
               reduceMotion={reduceMotion}
             />
           ))}
         </div>
       </div>
-      {/*
-        TWO SCRIMS, BECAUSE THE RIBBON IS IN TWO DIFFERENT RELATIONSHIPS TO THE
-        TYPE. At md and up it sits BESIDE the headline, so a left-to-right
-        gradient is right: heavy where the text is, clear where the cards should
-        be seen. Below md there is no beside — it is directly BEHIND the copy —
-        and that same gradient goes transparent exactly where the paragraph ends
-        up, which put white text over a brightly lit photograph of silverware and
-        made it unreadable. A flat heavy scrim is the only thing that works when
-        the two occupy the same space.
-      */}
-      <div className="pointer-events-none absolute inset-0 bg-black/80 md:hidden" />
-      <div className="pointer-events-none absolute inset-0 hidden bg-gradient-to-r from-black via-black/25 to-transparent md:block" />
     </div>
   );
 }
