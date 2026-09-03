@@ -138,12 +138,21 @@ green build has always been available.
 ## ignoreCommand
 
 ```
-git diff --quiet HEAD^ HEAD -- src public index.html vercel.json vite.config.js \
-  tailwind.config.js postcss.config.js jsconfig.json package.json package-lock.json
+git diff --quiet HEAD^ HEAD -- src scripts public index.html vercel.json vite.config.js \
+  tailwind.config.js postcss.config.js jsconfig.json package.json package-lock.json \
+  .puppeteerrc.cjs
 ```
 
 Exit 0 skips the build. A commit touching only `docs/` deploys nothing, which is
 intended. A commit touching `vercel.json` does deploy.
+
+**`scripts` and `.puppeteerrc.cjs` were added 2026-09-03, after a commit that
+fixed a build check was silently not deployed.** Both deployments for it showed
+`Canceled` with a 3-second duration and no logs, which reads like Vercel dropping
+a superseded build and is in fact the ignore rule doing its job on a stale list.
+`scripts/` holds the prerender crawl and all five checks — it is as much a build
+input as `src/`, and had simply never been listed. If a commit that should have
+deployed shows `Canceled` in three seconds, this list is the first place to look.
 
 ## Verifying a deploy actually landed
 
