@@ -133,8 +133,19 @@ export default function HeroSection() {
       {/* The hero's image asset, beside the type rather than behind it. */}
       <HeroCardRibbon items={ribbonItems} />
 
+      {/*
+        NOT max-w-7xl mx-auto, unlike every section below it, and that is the
+        change rather than an oversight. Ben: move the hero text farther left. The
+        centred 1280px container put the headline 120px in at 1440; hugging the
+        page padding starts it at 40px.
+
+        The cost, stated so nobody spends time "fixing" it: the hero's left edge
+        no longer lines up with the sections underneath, which do centre. That is
+        the trade he asked for, and it reads as intent because the hero is
+        full-bleed and they are not.
+      */}
       <div className="relative z-10 min-h-[100dvh] flex items-center px-6 md:px-10 pt-24 pb-20">
-        <div className="max-w-7xl mx-auto w-full">
+        <div className="w-full">
           <div className="max-w-2xl">
             <motion.div
               {...rise(0.1)}
