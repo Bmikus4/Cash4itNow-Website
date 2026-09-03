@@ -48,35 +48,59 @@ export default function CategoryList() {
              rule, so the block is gridded throughout and the outer border above
              closes it. The doubled edge that would otherwise fall on the last row
              is why the wrapper's border is /20 and these are /15. */
-          className="border-b border-foreground/15 sm:[&:nth-child(odd)]:border-r p-6 md:p-8 hover:bg-foreground/[0.03] transition-colors"
+          className="group flex flex-col border-b border-foreground/15 sm:[&:nth-child(odd)]:border-r hover:bg-foreground/[0.03] transition-colors"
         >
-          <div className="flex items-baseline gap-3 mb-3">
-            <span aria-hidden="true" className="font-heading font-black text-accent text-lg leading-none">
-              {String(i + 1).padStart(2, "0")}
-            </span>
-            <h3 className="font-heading font-black text-base md:text-lg uppercase tracking-tight leading-tight">
-              {category.title}
-            </h3>
+          {/*
+            alt="" ON PURPOSE. The heading directly underneath is the category
+            name, so a description here would make a screen reader announce the
+            same words twice, and any wording that avoided that would be a second
+            copy of the category name drifting from the first. The picture is
+            illustration; the text below it is the content.
+
+            cardImage comes from src/content/categories.js, which is the one list
+            /categories and the OfferCatalog JSON-LD are also built from.
+          */}
+          {category.cardImage && (
+            <div className="relative aspect-[16/9] overflow-hidden bg-foreground/5">
+              <img
+                src={category.cardImage}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            </div>
+          )}
+
+          <div className="p-6 md:p-8">
+            <div className="flex items-baseline gap-3 mb-3">
+              <span aria-hidden="true" className="font-heading font-black text-accent text-lg leading-none">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <h3 className="font-heading font-black text-base md:text-lg uppercase tracking-tight leading-tight">
+                {category.title}
+              </h3>
+            </div>
+            <div className="h-1 w-10 bg-accent mb-4" />
+            {/* Each item is its own element rather than one dot-joined string: a
+                run of forty grey words reads as a paragraph nobody finishes, and
+                the separator has to survive wrapping without stranding a dot at
+                the start of a line. The colour is foreground/70 rather than the
+                caption grey these were set in — these names are the content of
+                the section, not a footnote to it. */}
+            <ul className="flex flex-wrap gap-x-2 gap-y-1 list-none p-0 m-0">
+              {category.items.map((item, n) => (
+                <li key={item} className="text-foreground/70 text-sm leading-relaxed">
+                  {item}
+                  {n < category.items.length - 1 && (
+                    <span aria-hidden="true" className="text-accent/50 ml-2">
+                      /
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="h-1 w-10 bg-accent mb-4" />
-          {/* Each item is its own element rather than one dot-joined string: a
-              run of forty grey words reads as a paragraph nobody finishes, and
-              the separator has to survive wrapping without stranding a dot at the
-              start of a line. The colour is foreground/70 rather than the caption
-              grey these were set in — these names are the content of the section,
-              not a footnote to it. */}
-          <ul className="flex flex-wrap gap-x-2 gap-y-1 list-none p-0 m-0">
-            {category.items.map((item, n) => (
-              <li key={item} className="text-foreground/70 text-sm leading-relaxed">
-                {item}
-                {n < category.items.length - 1 && (
-                  <span aria-hidden="true" className="text-accent/50 ml-2">
-                    /
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
         </motion.li>
       ))}
     </ul>
