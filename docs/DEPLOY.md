@@ -30,8 +30,8 @@ repo was a plain Base44 export, and pinning it here makes the repo the single
 source of truth for how the site is built, the same rule `src/lib/origins.js`
 enforces for hosts.
 
-It is `vite build` rather than `npm run build`, and the difference is the
-prerender plus the five checks chained behind it:
+It WAS `vite build` rather than `npm run build` until 2026-09-03, and the
+difference is the prerender plus the five checks chained behind it:
 
 ```
 vite build && node scripts/prerender.mjs
@@ -39,57 +39,60 @@ vite build && node scripts/prerender.mjs
            && check-catalog-states && check-degraded-states && check-event-schema
 ```
 
-### Why the full build cannot run in CI
+### Why the full build could not run in CI, and what changed
 
-`scripts/prerender.mjs` drives a real Chrome over CDP:
+`scripts/prerender.mjs` drives a real Chrome over CDP, and the path to it was
+one literal:
 
 ```js
 const CHROME = process.env.CHROME_PATH || "C:/Program Files/Google/Chrome/Application/chrome.exe";
 ```
 
-Vercel builds on Linux, no browser ships in the build image, and there is no
+Vercel builds on Linux, no browser ships in the build image, and there was no
 puppeteer in `devDependencies` to supply one. The missing-browser `throw` is
-caught, so the crawl does not fail loudly; it marks all 16 routes skipped and
-writes shells instead. `check-category-text.mjs` then refuses to certify a shell
-as a snapshot, because it requires all 100 category names to be present as text
-in `dist/home/index.html`. Both behave correctly. The pipeline is simply not
-runnable anywhere except a Windows workstation, and never has been.
+caught, so the crawl did not fail loudly; it marked all 16 routes skipped and
+wrote shells instead. The pipeline was not runnable anywhere except a Windows
+workstation, and never had been.
 
-This was **not** what failed the two deploys above; the invalid JSON key was.
-It is a separate, real problem that has not yet been tested in CI.
+**Fixed 2026-09-03.** `puppeteer` is a devDependency solely to supply a browser,
+`browserExecutable()` resolves `CHROME_PATH` first and falls back to
+`puppeteer.executablePath()`, and `buildCommand` is now `npm run build`. Three
+details are load-bearing and none of them are visible from the code alone:
 
-### What that costs, measured
+- **`.puppeteerrc.cjs` moves the download into `node_modules/.cache`.** The
+  default is `~/.cache/puppeteer`, which Vercel does not restore, so every
+  deploy would re-fetch ~150MB before the crawl could start.
+- **`--no-sandbox` and `--disable-dev-shm-usage`.** The build container runs as
+  root, where Chrome's sandbox refuses to start; and its `/dev/shm` is 64MB,
+  which the renderer exhausts mid-crawl and dies without a useful message.
+- **A failed crawl now fails the deploy.** `check-category-text.mjs` refuses to
+  certify a shell as a snapshot, so a broken browser no longer ships shells
+  quietly — it stops the deploy. That is the point, but it does mean the crawl
+  is now on the critical path for every production deploy.
 
-Production serves the SPA shell for every route. On 2026-09-03, after the merge:
+### What it cost while it was broken, measured
+
+Production served the SPA shell for every route. On 2026-09-03, after the merge:
 
 ```
-/home/index.html        200   2062 bytes    should be 76365
+/home/index.html        200   2062 bytes    should be 102279
 /blog/index.html        200   2062 bytes
 /categories/index.html  200   2062 bytes
 /404.html               200   2062 bytes
 ```
 
 Those are literal file paths and they answered with the root shell, because the
-prerendered files are not in the deployment. Every rewrite in `vercel.json`
-points at a file that does not exist, and the site works for people only because
-Vercel falls through to `index.html` and React takes over.
+prerendered files were not in the deployment. Every rewrite in `vercel.json`
+pointed at a file that did not exist, and the site worked for people only
+because Vercel fell through to `index.html` and React took over.
 
 The sharp consequence: the category-text fix of 2026-08-11 moved all 100 names
-out of a `.webp` and into markup, and **no crawler has ever seen them**, because
-production has never served the snapshot that contains them. The defect that fix
-closed is still live in production for anything that does not execute JS.
+out of a `.webp` and into markup, and **no crawler had ever seen them**, because
+production had never served the snapshot that contains them.
 
-### To finish it
-
-Either give the crawl a browser on Linux, by adding `puppeteer` to
-`devDependencies` and setting `CHROME_PATH` from `puppeteer.executablePath()`,
-then moving `buildCommand` to `npm run build`; or keep the crawl off CI and
-deploy prebuilt output from a machine that has Chrome (`vercel build` then
-`vercel deploy --prebuilt`), which trades away push-to-deploy.
-
-Neither is started. Whoever does it should confirm the result the way this
-document did: fetch `/home/index.html` in production and read the byte count. A
-green build proves nothing here, because a green build has always been available.
+Confirm the result the way this document did: fetch `/home/index.html` in
+production and read the byte count. A green build proves nothing here, because a
+green build has always been available.
 
 ## ignoreCommand
 

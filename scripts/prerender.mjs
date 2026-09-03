@@ -32,7 +32,6 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROOT, "dist");
 const PORT = 5175;
 const CDP_PORT = 9444;
-const CHROME = process.env.CHROME_PATH || "C:/Program Files/Google/Chrome/Application/chrome.exe";
 const VIEWPORT = { width: 1280, height: 900 };
 const SCROLL_FRAMES = 14;
 
@@ -40,6 +39,26 @@ const skipped = [];
 const written = [];
 const log = (line) => process.stdout.write(`${line}\n`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Where the browser is.
+ *
+ * This used to be one literal — the Windows Chrome path — which meant the crawl
+ * could only ever run on a Windows workstation. Vercel builds on Linux with no
+ * browser in the image, so every production deploy hit the missing-browser
+ * throw, degraded all 16 routes to shells, and shipped them. Production served
+ * the 2062-byte shell for every URL from the day the site went up: no h1, no
+ * canonical, no JSON-LD, and none of the 100 category names that were moved out
+ * of a .webp into markup in order to be readable. See docs/DEPLOY.md.
+ *
+ * puppeteer is a devDependency purely to supply that browser. CHROME_PATH still
+ * wins, so a machine with its own Chrome need not download a second one.
+ */
+async function browserExecutable() {
+  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+  const { default: puppeteer } = await import("puppeteer");
+  return puppeteer.executablePath();
+}
 
 function serveDist() {
   const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".jpg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml", ".txt": "text/plain" };
@@ -132,9 +151,15 @@ async function main() {
   let session;
   const server = await serveDist();
   try {
-    if (!fs.existsSync(CHROME)) throw new Error(`no browser at ${CHROME} (override with CHROME_PATH)`);
-    chrome = spawn(CHROME, [
+    const executable = await browserExecutable();
+    if (!fs.existsSync(executable)) throw new Error(`no browser at ${executable} (override with CHROME_PATH)`);
+    chrome = spawn(executable, [
       "--headless=new", "--disable-gpu", `--remote-debugging-port=${CDP_PORT}`,
+      // CI only, and both are required there rather than tuning. Vercel's build
+      // container runs as root, where Chrome's sandbox refuses to start at all,
+      // and gives /dev/shm 64MB, which the renderer exhausts mid-crawl and dies
+      // silently. Neither flag changes anything on a workstation.
+      "--no-sandbox", "--disable-dev-shm-usage",
       `--user-data-dir=${path.join(ROOT, "node_modules/.cache/prerender-profile")}`, "about:blank",
     ], { stdio: "ignore" });
     for (let attempt = 0; attempt < 20 && !session; attempt++) {
