@@ -59,9 +59,12 @@ const STANDING_ITEMS = [
  * want it. The hero keeps the two actions it has always converted on, the phone
  * number and a free evaluation, plus the anchor down to How It Works.
  *
- * WHEN A CATALOG IS PUBLISHED it appears here as a strip under the buttons rather
- * than as a competing headline. That keeps the promise the grid section was added
- * for without giving the newest sale a louder voice than the business's own name.
+ * WHEN A CATALOG IS PUBLISHED it appears as one button in the bottom-right corner
+ * of the hero, on the spot Ben marked on a screenshot. It was a strip under the
+ * buttons in the left column first; both existed together for about ten minutes
+ * and the duplication was the whole argument against it. Either way the point
+ * stands: the newest sale gets an announcement without a voice louder than the
+ * business's own name.
  */
 
 /** As in SaleCard: only ITEMS and a counted PENDING carry a number the feed stated. */
@@ -96,10 +99,11 @@ export default function HeroSection() {
   const { data, isLoading } = useQuery(salesQuery());
 
   /*
-   * The strip renders only when a feed that ANSWERED gave us a sale. Degraded and
-   * snapshot both fall through to nothing, because this is above the fold and two
-   * of those states are a static file — the same rule as /upcoming-sales, for the
-   * same reason. An absent strip claims nothing; a present one is always true.
+   * The catalog button renders only when a feed that ANSWERED gave us a sale.
+   * Degraded and snapshot both fall through to nothing, because this is above the
+   * fold and two of those states are a static file — the same rule as
+   * /upcoming-sales, for the same reason. An absent button claims nothing; a
+   * present one is always true.
    */
   const trustworthy = !isLoading && !isDegraded(data) && !isSnapshot();
   const sale = trustworthy ? newestCatalog(data?.upcoming) : null;
@@ -144,7 +148,17 @@ export default function HeroSection() {
         the trade he asked for, and it reads as intent because the hero is
         full-bleed and they are not.
       */}
-      <div className="relative z-10 min-h-[100dvh] flex items-center px-6 md:px-10 pt-24 pb-20">
+      {/* The bottom padding grows on a phone WHEN THERE IS A CATALOG BUTTON,
+          and only then. The button is absolutely positioned, so on a narrow
+          screen it lands on top of the "How We Get It Done" link instead of
+          beside anything — the copy has to be pushed up to make room, and
+          reserving that room unconditionally would leave a gap under the
+          hero on every day there is no sale, which is most of them. */}
+      <div
+        className={`relative z-10 min-h-[100dvh] flex items-center px-6 md:px-10 pt-24 ${
+          sale?.slug ? "pb-44 md:pb-20" : "pb-20"
+        }`}
+      >
         <div className="w-full">
           <div className="max-w-2xl">
             <motion.div
@@ -224,45 +238,75 @@ export default function HeroSection() {
               </div>
             )}
 
-            {sale && (
-              <motion.div
-                initial={reduceMotion ? false : { opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.65 }}
-                className="mt-10 border-2 border-white/25 bg-white/[0.04] p-5 md:p-6 max-w-xl"
-              >
-                <p className="font-heading text-accent text-xs uppercase tracking-[0.3em] mb-2">Newest Catalog</p>
-                <h3 className="font-heading font-black text-white text-xl md:text-2xl uppercase tracking-tight leading-tight mb-3">
-                  {sale.title}
-                </h3>
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 mb-4">
-                  {dates && (
-                    <span className="inline-flex items-center gap-2 font-heading text-accent text-xs uppercase tracking-wider font-bold">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {dates}
-                    </span>
-                  )}
-                  {where && (
-                    <span className="font-heading text-white/60 text-xs uppercase tracking-wider font-bold">{where}</span>
-                  )}
-                  {count && (
-                    <span className="inline-flex items-center gap-2 font-heading text-white/60 text-xs uppercase tracking-wider font-bold">
-                      <Images className="w-3.5 h-3.5" />
-                      {count} {count === 1 ? "item" : "items"}
-                    </span>
-                  )}
-                </div>
-                <Link
-                  to={`/sale/${sale.slug}`}
-                  className="inline-flex items-center gap-2 font-heading font-black text-xs uppercase tracking-widest text-accent hover:text-white transition-colors"
-                >
-                  View The Catalog <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </motion.div>
-            )}
           </div>
         </div>
       </div>
+
+      {/*
+        THE NEWEST CATALOG, AS ONE BUTTON IN THE BOTTOM-RIGHT OF THE HERO. Ben
+        marked the spot on a screenshot. One button, for the newest catalog only —
+        newestCatalog() already picks a single sale, and a row of them here would
+        be a second /upcoming-sales competing with the headline.
+
+        It renders on exactly the same condition as the panel in the left column:
+        a feed that ANSWERED and gave us a sale with a slug. Degraded feeds and
+        snapshots fall through to nothing, because a button promising a catalog
+        that 404s is worse than no button, and a static file cannot know.
+
+        IT REPLACED A PANEL IN THE LEFT COLUMN that said the same words. That
+        panel had the dates, the location and the item count, so those moved in
+        here rather than being dropped — one affordance carrying everything,
+        which is what "one displayed" has to mean when the alternative is the
+        same catalog announced twice on one screen.
+
+        It sits higher on a phone than on a desktop because the scroll cue is
+        centred at the hero's foot and they would otherwise overlap.
+      */}
+      {sale?.slug && (
+        <motion.div
+          initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="absolute bottom-20 right-6 md:bottom-8 md:right-10 z-20 max-w-[calc(100%-3rem)] md:max-w-sm"
+        >
+          <Link
+            to={`/sale/${sale.slug}`}
+            className="group flex items-center gap-4 border-2 border-white/25 bg-black/70 px-5 py-4 backdrop-blur-sm transition-colors hover:border-accent hover:bg-black/85"
+          >
+            <span className="min-w-0">
+              <span className="block font-heading text-accent text-[0.65rem] uppercase tracking-[0.3em] mb-1">
+                Newest Catalog
+              </span>
+              <span className="block truncate font-heading font-black text-white text-base lg:text-lg uppercase tracking-tight">
+                {sale.title}
+              </span>
+              {/* Only what the feed actually stated. saleDateRange and
+                  saleLocation return "" for a sale that carries neither, and
+                  catalogCount returns null unless the catalog counted itself —
+                  so an incomplete sale loses this line rather than printing an
+                  empty one or a zero. */}
+              {(dates || where || count) && (
+                <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-heading text-white/55 text-[0.65rem] uppercase tracking-wider font-bold">
+                  {dates && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Calendar className="w-3 h-3" />
+                      {dates}
+                    </span>
+                  )}
+                  {where && <span>{where}</span>}
+                  {count && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Images className="w-3 h-3" />
+                      {count} {count === 1 ? "item" : "items"}
+                    </span>
+                  )}
+                </span>
+              )}
+            </span>
+            <ArrowRight className="w-5 h-5 shrink-0 text-white/70 transition-transform group-hover:translate-x-1 group-hover:text-accent" />
+          </Link>
+        </motion.div>
+      )}
 
       {/* data-loop-animation: this never settles, so framer-motion rewrites its
           inline transform every frame and a snapshot captures whichever value the
