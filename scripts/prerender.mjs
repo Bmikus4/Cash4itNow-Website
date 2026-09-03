@@ -197,6 +197,16 @@ async function main() {
     return;
   }
 
+  /*
+   * The pristine shell is read ONCE, here, before anything can overwrite it, and
+   * kept as bytes for the rest of the run. Two things need it and both would
+   * otherwise read dist/index.html after this script has replaced it with the
+   * home page — which would quietly copy the HOME PAGE into every route that
+   * failed to snapshot, and into the client-rendered fallback for /sale/:slug.
+   */
+  const shell = fs.readFileSync(path.join(DIST, "index.html"));
+  fs.writeFileSync(path.join(DIST, "app.html"), shell);
+
   const { static: staticRoutes, dynamic } = routesFromApp(
     fs.readFileSync(path.join(ROOT, "src/App.jsx"), "utf8"),
     postExpansions(POSTS)
@@ -281,12 +291,37 @@ async function main() {
   // shell is exactly the right fallback — it is what an un-snapshotted route was
   // always meant to serve — and copying it is the same move vite.config makes for
   // 404.html. Deterministic: a byte copy of a file this build just produced.
-  const shell = fs.readFileSync(path.join(DIST, "index.html"));
   for (const route of staticRoutes.filter((r) => !written.includes(r))) {
     const out = path.join(DIST, outputPathFor(route));
     fs.mkdirSync(path.dirname(out), { recursive: true });
     fs.writeFileSync(out, shell);
     log(`  shell   ${route} -> dist/${outputPathFor(route)} (client-rendered, but the rewrite's target now exists)`);
+  }
+
+  /*
+   * THE HOME SNAPSHOT HAS TO LAND ON dist/index.html, and the reason is Vercel's
+   * routing order rather than anything about this crawl.
+   *
+   *   redirects -> headers -> FILESYSTEM -> rewrites
+   *
+   * A rewrite is only consulted when no file matches, so `{ "source": "/",
+   * "destination": "/home/index.html" }` never fires: dist/index.html exists,
+   * and Vercel serves it. Every other route worked because nothing sits at
+   * dist/categories, so the rewrite got its turn. The one page that did not was
+   * the home page — measured in production, 2062 bytes at / and 102279 bytes at
+   * /home/index.html on the same deployment.
+   *
+   * So the file itself is replaced. dist/app.html, written at the top of this
+   * run, is the shell that /sale/:slug is rewritten to; it exists precisely
+   * because index.html can no longer play that part, and pointing a sale URL at
+   * the home markup would serve a crawler one page's content under another
+   * page's address. dist/404.html is untouched and is still the shell, copied by
+   * vite.config's closeBundle before this script runs.
+   */
+  const homeSnapshot = path.join(DIST, outputPathFor("/"));
+  if (written.includes("/") && fs.existsSync(homeSnapshot)) {
+    fs.copyFileSync(homeSnapshot, path.join(DIST, "index.html"));
+    log(`  root    / -> dist/index.html (the filesystem answers / before any rewrite does)`);
   }
 
   log(`PRERENDER: ${written.length} snapshotted, ${skipped.length} left client-rendered.`);

@@ -156,9 +156,16 @@ function spaRoutesAreRewritten() {
       // own prerendered snapshot. Both are valid; the terminal /(.*) rule points
       // at /404.html and must never read as coverage, or the gate would pass for
       // every missing route the moment a catch-all existed.
+      //
+      // /app.html IS the shell. index.html stopped being it when the prerender
+      // began writing the home snapshot over dist/index.html — which it must,
+      // because Vercel consults the filesystem before any rewrite, so `/` is
+      // answered by that file and the rewrite for `/` never runs. A route
+      // rewritten to /app.html is therefore client-rendered on purpose.
+      const SHELLS = new Set(['/index.html', '/app.html'])
       const covering = new Set(
         (config.rewrites ?? [])
-          .filter((rule) => rule.destination === '/index.html' || /^\/[\w./-]+\/index\.html$/.test(rule.destination))
+          .filter((rule) => SHELLS.has(rule.destination) || /^\/[\w./-]+\/index\.html$/.test(rule.destination))
           .map((rule) => rule.source)
       )
 

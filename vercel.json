@@ -21,7 +21,7 @@
     { "source": "/blog/what-happens-after-you-call", "destination": "/blog/what-happens-after-you-call/index.html" },
     { "source": "/blog/paperwork-and-photographs-found-in-a-clearout", "destination": "/blog/paperwork-and-photographs-found-in-a-clearout/index.html" },
     { "source": "/blog/do-i-need-an-appraisal-before-selling", "destination": "/blog/do-i-need-an-appraisal-before-selling/index.html" },
-    { "source": "/sale/:slug", "destination": "/index.html" },
+    { "source": "/sale/:slug", "destination": "/app.html" },
     { "source": "/(.*)", "destination": "/404.html" }
   ],
   "ignoreCommand": "git diff --quiet HEAD^ HEAD -- src public index.html vercel.json vite.config.js tailwind.config.js postcss.config.js jsconfig.json package.json package-lock.json",
