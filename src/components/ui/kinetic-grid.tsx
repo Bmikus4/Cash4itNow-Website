@@ -1,5 +1,28 @@
 "use client";
 
+/**
+ * MODIFIED FROM UPSTREAM. Four changes, all of them containment, and each one is
+ * listed here so a future re-copy of the original does not silently undo them.
+ *
+ *   1. The canvas was `fixed inset-0` and sized to window.innerWidth/Height, so
+ *      it was a viewport-wide layer that stayed mounted behind every section of
+ *      the page rather than living inside the one it belongs to. It is now
+ *      `absolute inset-0`, sized to the host element via ResizeObserver.
+ *   2. The rAF loop had no stop condition, so it repainted a full-viewport canvas
+ *      for the rest of the session, including while scrolled far past it and
+ *      while the tab was in the background. It now runs only while the host is
+ *      on screen and the document is visible.
+ *   3. mousemove and click were bound to `window`, which after (1) would warp the
+ *      grid from pointer activity anywhere on the page, in the wrong coordinate
+ *      space. They are bound to the host and converted to host-relative
+ *      coordinates, and the pointer resets on leave so the warp does not stick.
+ *   4. prefers-reduced-motion was not consulted at all. It now paints one static
+ *      frame and starts no loop, and it re-evaluates if the setting changes.
+ *
+ * (2) is the one that matters most on a phone. The rest follow from it: a loop
+ * you intend to stop needs to know which element it belongs to.
+ */
+
 import { useEffect, useRef, useCallback, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -60,11 +83,13 @@ export default function KineticGrid({
   globalColor?: "default" | "monochrome";
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
 
   const mouseRef = useRef<Point>({ x: -9999, y: -9999 });
   const targetMouseRef = useRef<Point>({ x: -9999, y: -9999 });
   const ripplesRef = useRef<Ripple[]>([]);
   const rafRef = useRef<number>(0);
+  const runningRef = useRef(false);
   const sizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
 
   // ── Warp ────────────────────────────────────────────────────────────────────
@@ -312,6 +337,10 @@ export default function KineticGrid({
 
   const animate = useCallback(
     (now: number) => {
+      // The stop condition upstream did not have. Without it, cancelling the
+      // frame is not enough: any in-flight callback immediately queues another.
+      if (!runningRef.current) return;
+
       const m = mouseRef.current;
       const t = targetMouseRef.current;
 
@@ -328,64 +357,133 @@ export default function KineticGrid({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const host = hostRef.current;
+    if (!canvas || !host) return;
 
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    // Sized from the HOST, not the window. The canvas is a layer inside this
+    // section now, so the viewport is the wrong measurement in every case where
+    // the section is not exactly viewport-sized.
     const setSize = () => {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
+      const rect = host.getBoundingClientRect();
+      const w = Math.max(1, Math.round(rect.width));
+      const h = Math.max(1, Math.round(rect.height));
+      if (w === sizeRef.current.w && h === sizeRef.current.h) return;
       canvas.width = w;
       canvas.height = h;
       sizeRef.current = { w, h };
-      if (mouseRef.current.x === -9999) {
-        mouseRef.current = { x: -9999, y: -9999 };
-        targetMouseRef.current = { x: -9999, y: -9999 };
-      }
+      // A resize invalidates the drawn frame, and while paused nothing will
+      // redraw it. Paint once so a resize off-screen or under reduced motion
+      // does not leave a stretched or blank canvas behind.
+      if (!runningRef.current) draw(performance.now());
     };
 
+    const ro = new ResizeObserver(setSize);
+    ro.observe(host);
     setSize();
-    window.addEventListener("resize", setSize);
 
-    const onMouseMove = (e: MouseEvent) => {
-      targetMouseRef.current = { x: e.clientX, y: e.clientY };
+    // HOST-RELATIVE, and bound to the host rather than the window. Bound to the
+    // window these would warp the grid from pointer movement anywhere on the
+    // page, and after the canvas stopped being viewport-sized the coordinates
+    // would not even be in the same space as the grid.
+    const toLocal = (e: MouseEvent | PointerEvent): Point => {
+      const rect = host.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      targetMouseRef.current = toLocal(e);
+    };
+
+    // Without this the warp freezes wherever the pointer left, which reads as a
+    // rendering fault rather than as a resting state.
+    const onPointerLeave = () => {
+      targetMouseRef.current = { x: -9999, y: -9999 };
     };
 
     const onClick = (e: MouseEvent) => {
-      ripplesRef.current.push({
-        x: e.clientX,
-        y: e.clientY,
-        radius: 0,
-        opacity: 1,
-        born: performance.now(),
-      });
+      const p = toLocal(e);
+      ripplesRef.current.push({ ...p, radius: 0, opacity: 1, born: performance.now() });
     };
 
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("click", onClick);
-    rafRef.current = requestAnimationFrame(animate);
+    host.addEventListener("pointermove", onPointerMove);
+    host.addEventListener("pointerleave", onPointerLeave);
+    host.addEventListener("click", onClick);
 
-    return () => {
-      window.removeEventListener("resize", setSize);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("click", onClick);
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
+    const start = () => {
+      if (runningRef.current || reduced.matches) return;
+      runningRef.current = true;
+      rafRef.current = requestAnimationFrame(animate);
+    };
+
+    const stop = () => {
+      runningRef.current = false;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    };
+
+    // The loop exists only while this section is on screen. A marketing page is
+    // mostly the parts of it you are not looking at.
+    let onScreen = false;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        onScreen = entry.isIntersecting;
+        if (onScreen && !document.hidden) start();
+        else stop();
+      },
+      { threshold: 0 },
+    );
+    io.observe(host);
+
+    const onVisibility = () => {
+      if (document.hidden) stop();
+      else if (onScreen) start();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    // Reduced motion gets one static frame and no loop, and it is re-evaluated
+    // rather than read once, because the OS setting can change with the page open.
+    const onReducedChange = () => {
+      if (reduced.matches) {
+        stop();
+        draw(performance.now());
+      } else if (onScreen && !document.hidden) {
+        start();
       }
     };
-  }, [animate]);
+    reduced.addEventListener("change", onReducedChange);
+
+    if (reduced.matches) draw(performance.now());
+
+    return () => {
+      stop();
+      ro.disconnect();
+      io.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
+      reduced.removeEventListener("change", onReducedChange);
+      host.removeEventListener("pointermove", onPointerMove);
+      host.removeEventListener("pointerleave", onPointerLeave);
+      host.removeEventListener("click", onClick);
+    };
+  }, [animate, draw]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div
+      ref={hostRef}
       className={cn(
         "relative w-full min-h-screen overflow-hidden",
         globalColor === "monochrome" ? "bg-[#000000]" : "bg-[#161618]",
         className,
       )}
     >
+      {/* absolute, NOT fixed. Fixed made this a viewport layer that outlived its
+          own section and sat behind the whole page. */}
       <canvas
         ref={canvasRef}
-        className="fixed inset-0 w-full h-full z-0 pointer-events-none"
+        className="absolute inset-0 w-full h-full z-0 pointer-events-none"
       />
 
       <div className="relative z-10 w-full h-full">{children}</div>
