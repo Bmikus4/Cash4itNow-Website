@@ -216,17 +216,28 @@ export default function HeroCardRibbon({ items }) {
      * handful of images six times over before reaching the headline — and the
      * cards must never eat a click meant for the CTA underneath them.
      *
-     * opacity below md is the mobile half of the legibility problem the black
-     * scrim used to solve. There is no beside on a phone: the ribbon is directly
-     * BEHIND the copy, and the only ways to keep white type readable over a
-     * brightly lit photograph of silverware are to cover the photograph or to
-     * make less of it. Covering it is what hid the grid, so the cards are ghosted
-     * to a quarter instead and the grid reads through them.
+     * opacity is the half of the legibility problem a mask cannot solve. Where
+     * the ribbon is BEHIND the copy rather than beside it, the only ways to keep
+     * white type readable over a brightly lit photograph of silverware are to
+     * cover the photograph or to have less of it. Covering it is what hid the
+     * grid, so the cards are ghosted to a quarter instead and the grid reads
+     * through them.
+     *
+     * IT RAMPS OVER THREE BREAKPOINTS, and every step was screenshotted rather
+     * than chosen. The reason it cannot be one step is that the ribbon's width
+     * is a PERCENTAGE while the copy's is FIXED (max-w-xl), so the two overlap
+     * by an amount that shrinks as the viewport grows and is never zero below
+     * 1280: 62% of 768 leaves the paragraph and the second CTA sitting on fully
+     * lit cards, and at 1024 the line ends still cross them. Only at xl does
+     * beside become literally true, and only there do the cards come up to full.
+     *
+     * Widening the box and brightening it are therefore two different
+     * breakpoints. They were one until this was screenshotted at 768.
      */
     <div
       ref={boxRef}
       aria-hidden="true"
-      className="pointer-events-none absolute inset-y-0 right-0 z-0 w-full overflow-hidden opacity-25 md:w-[62%] md:opacity-100"
+      className="pointer-events-none absolute inset-y-0 right-0 z-0 w-full overflow-hidden opacity-25 md:w-[62%] lg:opacity-60 xl:opacity-100"
       style={DISSOLVE}
     >
       <div className="absolute left-1/2 top-1/2 w-[190%] -translate-x-1/2 -translate-y-1/2 rotate-[-22deg]">
