@@ -55,6 +55,7 @@ export default function Footer() {
             <div className="flex flex-col gap-2">
               {[
                 { label: "Home", path: "/" },
+                { label: "Upcoming Sales", path: "/upcoming-sales" },
                 { label: "For Sale", path: "/for-sale" },
                 { label: "What We Buy", path: "/categories" },
                 { label: "Our Story", path: "/about" },

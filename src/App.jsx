@@ -12,6 +12,7 @@ import Categories from './pages/Categories';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import ForSale from './pages/ForSale';
+import UpcomingSales from './pages/UpcomingSales';
 import ForProfessionals from './pages/ForProfessionals';
 import SalePage from './pages/SalePage';
 import BlogIndex from './pages/BlogIndex';
@@ -33,6 +34,12 @@ function App() {
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/for-sale" element={<ForSale />} />
+                {/* The public end of the tool's catalogs. Static, unlike
+                    /sale/:slug: the LIST is one URL and can be prerendered and
+                    put in the sitemap, while the individual sales behind it
+                    cannot, because their slugs only exist once a catalog is
+                    published. */}
+                <Route path="/upcoming-sales" element={<UpcomingSales />} />
                 <Route path="/for-professionals" element={<ForProfessionals />} />
                 <Route path="/blog" element={<BlogIndex />} />
                 {/* Parameterised, but unlike /sale/:slug its complete slug list

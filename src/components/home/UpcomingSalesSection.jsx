@@ -1,13 +1,11 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Calendar, ArrowRight, MapPin } from "lucide-react";
-import { format } from "date-fns";
+import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { salesQuery, saleDateRange, saleGridClass, saleLocation } from "@/api/salesClient";
+import { salesQuery, saleGridClass } from "@/api/salesClient";
 import { sectionMode, isSnapshot } from "@/api/salesWire";
-import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
-import CountdownTimer from "@/components/sales/CountdownTimer";
+import SaleCard from "@/components/sales/SaleCard";
 import SalesUnavailableNotice from "@/components/sales/SalesUnavailableNotice";
 import { useJsonLd, saleEventsGraph } from "@/lib/structuredData";
 
@@ -40,6 +38,11 @@ export default function UpcomingSalesSection() {
   // A feed we could not READ is a different fact and must not take the same
   // exit. Vanishing here would tell a customer this business has nothing on,
   // which is precisely the lie the platform's 503 was added to stop telling.
+  //
+  // THE PAGE AT /upcoming-sales DOES NOT SHARE THIS EXIT, deliberately. A
+  // section on a page about something else may leave; a page whose whole subject
+  // is the list cannot, so it states the empty case instead. See pageMode() in
+  // src/pages/UpcomingSales.jsx.
   if (mode === "hidden") return null;
 
   return (
@@ -61,60 +64,34 @@ export default function UpcomingSalesSection() {
         {mode === "unavailable" ? (
           <SalesUnavailableNotice message={data?.message} />
         ) : (
-        <div className={`grid gap-6 ${saleGridClass(sales.length)}`}>
-          {sales.map((sale, i) => (
+          <>
+            {/* The card is shared with /upcoming-sales rather than written twice.
+                Two hand-kept copies of one card is the same defect shape as a
+                hand-kept sitemap or a second origin literal. */}
+            <div className={`grid gap-6 ${saleGridClass(sales.length)}`}>
+              {sales.map((sale, i) => (
+                <SaleCard key={sale.slug} sale={sale} index={i} tone="dark" />
+              ))}
+            </div>
+
+            {/* This band shows what is next; the page shows everything, including
+                the sales already run. Only reachable when there IS a list above
+                it — the empty and degraded paths have already returned. */}
             <motion.div
-              key={sale.slug}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.08 }}
-              className="border-2 border-background/20 bg-background/5 flex flex-col group"
+              className="text-center mt-12"
             >
-              {sale.imageUrl && (
-                <div className="overflow-hidden">
-                  <img
-                    src={sale.imageUrl}
-                    alt={sale.title}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                </div>
-              )}
-              <div className="p-6 flex flex-col flex-1">
-                <div className="flex flex-col gap-1.5 mb-3">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-accent flex-shrink-0" />
-                    <span className="font-heading text-accent text-sm uppercase tracking-wider font-bold">
-                      {saleDateRange(sale, format)}
-                    </span>
-                  </div>
-                  {saleLocation(sale) && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-background/50 flex-shrink-0" />
-                      <span className="font-heading text-background/70 text-sm uppercase tracking-wider font-bold">
-                        {saleLocation(sale)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <h3 className="font-heading font-black text-background text-xl uppercase tracking-tight mb-2">
-                  {sale.title}
-                </h3>
-                {sale.description && (
-                  <p className="text-background/60 text-sm leading-relaxed flex-1 line-clamp-3">{sale.description}</p>
-                )}
-                <Link
-                  to={`/sale/${sale.slug}`}
-                  className="inline-flex items-center gap-2 mt-5 font-heading font-black text-xs uppercase tracking-widest text-accent hover:text-background transition-colors"
-                >
-                  View Sale Details <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-                <CountdownTimer startsAt={sale.startsAt} />
-                <SaleCouponSignup sale={sale} />
-              </div>
+              <Link
+                to="/upcoming-sales"
+                className="inline-flex items-center justify-center gap-2 border-2 border-accent text-accent px-8 py-4 font-heading font-bold text-lg uppercase tracking-wide hover:bg-accent hover:text-white transition-colors"
+              >
+                See Every Sale
+                <ArrowRight className="w-5 h-5" />
+              </Link>
             </motion.div>
-          ))}
-        </div>
+          </>
         )}
       </div>
     </section>
