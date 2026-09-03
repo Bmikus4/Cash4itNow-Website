@@ -173,14 +173,38 @@ async function snapshot(send, route) {
   await send("Page.addScriptToEvaluateOnNewDocument", { source: "window.__C4IN_SNAPSHOT__ = true;" });
   await send("Page.navigate", { url: `http://localhost:${PORT}${route}` });
   await sleep(2600);
+  /*
+   * THE LOOP MAY NOT STOP WHILE THE PAGE IS STILL GROWING. It used to break the
+   * moment the viewport reached the bottom, and that bottom is a moving target:
+   * the images below the fold are loading="lazy", so early in the crawl the
+   * document is short, "at end" is true after a couple of steps, and everything
+   * further down never enters the viewport at all. Its whileInView sections stay
+   * at opacity:0 and get written into the snapshot that way — markup that says
+   * INVISIBLE, which this file's own rule calls worse than no snapshot.
+   *
+   * It showed up as `WARNING: 32 element(s) still opacity:0` on the home page
+   * after ten photographs were added to What We Buy: ten <li> and the section
+   * headings around them. The bug was always there; the images made the document
+   * grow enough for it to fire.
+   *
+   * So reaching the bottom is not enough — the bottom has to have stopped
+   * moving. SCROLL_FRAMES still caps it, so a page that never settles costs a
+   * bounded number of steps rather than hanging the build.
+   */
+  let lastHeight = -1;
   for (let i = 0; i < SCROLL_FRAMES; i++) {
     await send("Runtime.evaluate", { expression: `window.scrollTo(0, ${i} * ${VIEWPORT.height - 60})` });
     await sleep(320);
-    const atEnd = await send("Runtime.evaluate", {
-      expression: "window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4",
+    const probe = await send("Runtime.evaluate", {
+      expression: `({
+        atEnd: window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4,
+        height: document.documentElement.scrollHeight,
+      })`,
       returnByValue: true,
     });
-    if (atEnd?.result?.value) break;
+    const { atEnd, height } = probe?.result?.value ?? {};
+    if (atEnd && height === lastHeight) break;
+    lastHeight = height;
   }
   await send("Runtime.evaluate", { expression: "window.scrollTo(0, 0)" });
   await sleep(240);
