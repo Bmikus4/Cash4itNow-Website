@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Home, DollarSign, Package, Truck } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Home, DollarSign, Package, Truck, ArrowRight } from "lucide-react";
 
 const steps = [
   { icon: Home, title: "Full Estate Cleanouts", description: "We handle everything — from single rooms to entire estates. Professional and thorough." },
@@ -43,6 +44,25 @@ export default function HowItWorksSection() {
             </motion.div>
           ))}
         </div>
+
+        {/* Moved out of the hero on Ben's call. Somebody who has just read how the
+            process works is the first person on the page with a reason to look at
+            what is scheduled; in the hero it was competing with the phone number
+            before anyone knew what the business does. */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mt-12 md:mt-16"
+        >
+          <Link
+            to="/upcoming-sales"
+            className="inline-flex items-center justify-center gap-2 border-2 border-accent text-accent px-8 py-4 font-heading font-bold text-lg uppercase tracking-wide hover:bg-accent hover:text-white transition-colors"
+          >
+            See Upcoming Sales
+            <ArrowRight className="w-5 h-5" />
+          </Link>
+        </motion.div>
       </div>
     </section>
   );

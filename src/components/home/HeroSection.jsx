@@ -1,140 +1,127 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
-import { Phone, ArrowDown, ChevronRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { motion, useReducedMotion } from "framer-motion";
+import { Phone, ArrowDown, ChevronRight, ArrowRight, Calendar, Images } from "lucide-react";
+import { format } from "date-fns";
+import { Link } from "react-router-dom";
 import HeroLeadForm from "@/components/home/HeroLeadForm";
-import DiagonalMarqueeCarousel from "@/components/ui/great-ui-diagonal-marquee-carousel";
+import KineticGrid from "@/components/ui/kinetic-grid";
+import { salesQuery, saleDateRange, saleLocation } from "@/api/salesClient";
+import { isDegraded, isSnapshot } from "@/api/salesWire";
+import { readCatalog, CATALOG_ITEMS, CATALOG_PENDING } from "@/api/catalogChannel";
 
 /**
- * THE BEFORE/AFTER SLIDER IS GONE, on Ben's call 2026-09-03: "completely remove
- * the hero image from the website". What replaced it is a diagonal marquee of
- * real inventory running behind the type.
+ * ONE HERO, on the kinetic grid.
  *
- * The parallax that used to live here was translation-only for a specific
- * reason: the slider mapped drag position through getBoundingClientRect, and a
- * rotate or scale on any ancestor distorted that rect so the handle drifted from
- * the pointer. That constraint died with the slider, which is why the marquee is
- * free to rotate.
+ * This was briefly two stacked full-viewport sections — a kinetic-grid panel with
+ * its own headline, then the hero underneath with its own — and Ben's read was
+ * that it was not what he asked for. It wasn't: the site opened by saying two
+ * different things in two screens before a visitor reached anything. The grid is
+ * the hero's background now and the hero's own copy sits on it, which is what
+ * "this should overlay the kinetic grid" means.
  *
- * BeforeAfterSlider.jsx STAYS. It is not dead — /for-professionals renders its
- * own before/after there, and deleting the component to tidy up after this
- * change would break that page.
+ * The before/after slider that used to live here is gone for good (Ben, "remove
+ * the hero image from the website"), and so is the marquee that briefly replaced
+ * it — that component is now its own band below, in InventoryMarquee.
  *
- * NEITHER hero-before.webp NOR hero-after.webp APPEARS BELOW, deliberately.
- * Dropping the slider and then dealing one of its two photographs back into the
- * marquee would put the removed image back on the same screen it was removed
- * from, which is not what "completely remove the hero image" means.
+ * BeforeAfterSlider.jsx STAYS: /for-professionals renders its own before/after
+ * with it, so deleting it to tidy up would break that page.
  *
- * THE PHOTOGRAPHS ARE THE BUSINESS'S OWN, not stock. The brief suggested
- * Unsplash; landscapes and forests would be actively wrong on an estate
- * liquidation page, where the entire claim being made is "this is the kind of
- * thing we buy and sell". Every file below is already in /public/img and is the
- * same photograph the matching category uses on /categories, so the hero shows
- * real inventory and costs no new bytes.
+ * NO "SEE UPCOMING SALES" BUTTON HERE, on Ben's call: it belongs at the bottom of
+ * How It Works and at the bottom of the page, where somebody has read enough to
+ * want it. The hero keeps the two actions it has always converted on, the phone
+ * number and a free evaluation, plus the anchor down to How It Works.
+ *
+ * WHEN A CATALOG IS PUBLISHED it appears here as a strip under the buttons rather
+ * than as a competing headline. That keeps the promise the grid section was added
+ * for without giving the newest sale a louder voice than the business's own name.
  */
-const HERO_CARDS = [
-  { id: "toys", url: "/img/3065f1e9c_generated_image.webp", title: "Vintage Tonka, Matchbox and Atari" },
-  { id: "griswold", url: "/img/96588d74a_generated_image.webp", title: "Griswold cast iron" },
-  { id: "jewelry", url: "/img/f3522ea84_generated_image.webp", title: "Fine and costume jewelry" },
-  { id: "uranium", url: "/img/2f04db7ab_generated_image.webp", title: "Uranium glass collection" },
-  { id: "cards", url: "/img/b72c0acb4_generated_image.webp", title: "Old baseball cards" },
-  { id: "decor", url: "/img/2ac325373_generated_image.webp", title: "Home and decor" },
-  { id: "pipes", url: "/img/ac93609f7_generated_image.webp", title: "Vintage smoking pipes" },
-  { id: "pens", url: "/img/63ce2e7e9_generated_image.webp", title: "Vintage fountain pens" },
-  { id: "uv", url: "/img/0bf12dc53_generated_image.webp", title: "Uranium glass under UV" },
-];
+
+/** As in SaleCard: only ITEMS and a counted PENDING carry a number the feed stated. */
+function catalogCount(catalog) {
+  const read = readCatalog(catalog);
+  const counted = read.state === CATALOG_ITEMS || read.state === CATALOG_PENDING;
+  if (!counted || !Number.isFinite(read.count) || read.count <= 0) return null;
+  return read.count;
+}
+
+/**
+ * The soonest sale by startsAt, not upcoming[0]. Feed order is the platform's
+ * business and has never been part of the contract, so a headline that depended
+ * on it would depend on an implementation detail one repo over.
+ */
+function newestCatalog(upcoming) {
+  const list = Array.isArray(upcoming) ? upcoming.filter(Boolean) : [];
+  if (!list.length) return null;
+  const time = (sale) => {
+    const t = sale?.startsAt ? new Date(sale.startsAt).getTime() : NaN;
+    return Number.isNaN(t) ? Infinity : t;
+  };
+  return [...list].sort((a, b) => time(a) - time(b))[0];
+}
 
 export default function HeroSection() {
   const [showForm, setShowForm] = useState(false);
+  const reduceMotion = useReducedMotion();
+
+  // Shares SALES_QUERY_KEY with UpcomingSalesSection, so the home page asks the
+  // platform for this list once rather than twice.
+  const { data, isLoading } = useQuery(salesQuery());
+
+  /*
+   * The strip renders only when a feed that ANSWERED gave us a sale. Degraded and
+   * snapshot both fall through to nothing, because this is above the fold and two
+   * of those states are a static file — the same rule as /upcoming-sales, for the
+   * same reason. An absent strip claims nothing; a present one is always true.
+   */
+  const trustworthy = !isLoading && !isDegraded(data) && !isSnapshot();
+  const sale = trustworthy ? newestCatalog(data?.upcoming) : null;
+  const count = sale ? catalogCount(sale.catalog) : null;
+  const dates = sale ? saleDateRange(sale, format) : "";
+  const where = sale ? saleLocation(sale) : "";
+
+  const rise = (delay) =>
+    reduceMotion
+      ? {}
+      : { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { delay } };
 
   return (
-    <section className="relative min-h-[100dvh] flex items-center overflow-hidden bg-foreground pt-16">
-      {/*
-        DECORATIVE, AND aria-hidden FOR A CONCRETE REASON. The marquee repeats
-        each card six times per row across five rows, so without this a screen
-        reader reads roughly three hundred image descriptions before reaching the
-        headline. Hiding the whole layer is the correct treatment for background
-        imagery and needs no change to the vendored component.
-
-        The card and fade classes are passed rather than edited into the
-        component so it stays a clean upstream copy. They exist to hold the
-        site's two hardest rules (docs/UI-PRINCIPLES.md §8): radius 0 and no
-        shadows. The component ships rounded-xl and shadow-2xl, and tailwind-merge
-        lets the later classes win. The fades ship from-white, which would have
-        bled a white band across the top and bottom of a black section.
-      */}
-      <div aria-hidden="true" className="absolute inset-0 z-0">
-        <DiagonalMarqueeCarousel
-          cards={HERO_CARDS}
-          angle={-25}
-          baseSpeed={120}
-          className="absolute -inset-5 h-[calc(100%+2.5rem)] max-h-none w-[calc(100%+2.5rem)] max-w-none"
-          cardClassName="rounded-none shadow-none cursor-default border border-background/10"
-          fadeClassName="from-foreground"
-        />
-        {/*
-          The scrim is what makes the headline legible, and it is why the cards
-          each carry their own bg-black/40 as well. Measured against the lightest
-          card in the set (the uranium-glass UV shot): white display type over the
-          bare marquee fails WCAG AA, and over this it does not. If the card set
-          is ever swapped for brighter photographs, re-check it rather than
-          assuming this opacity still holds.
-        */}
-        <div className="absolute inset-0 bg-foreground/75" />
-      </div>
-
-      <div className="relative z-10 w-full px-6 md:px-10 py-16 md:py-20">
-        <div className="max-w-7xl mx-auto">
+    <KineticGrid globalColor="monochrome" className="min-h-[100dvh]">
+      <div className="min-h-[100dvh] flex items-center px-6 md:px-10 pt-24 pb-20">
+        <div className="max-w-7xl mx-auto w-full">
           <div className="max-w-3xl">
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
+              {...rise(0.1)}
               className="inline-flex items-center gap-2 bg-accent text-white px-4 py-2 mb-8"
             >
               <span className="text-sm font-bold uppercase tracking-widest font-heading">Veteran-Owned Business</span>
             </motion.div>
 
             <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="font-heading font-black text-background text-5xl md:text-7xl lg:text-8xl uppercase leading-[0.9] tracking-tight mb-4"
+              {...rise(0.2)}
+              className="font-heading font-black text-white text-5xl md:text-7xl lg:text-8xl uppercase leading-[0.9] tracking-tight mb-4"
             >
               Cash 4 It Now
             </motion.h1>
 
             <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
+              {...rise(0.3)}
               className="font-heading font-bold text-accent text-2xl md:text-3xl uppercase tracking-wide mb-5"
             >
               Estate Liquidators
             </motion.h2>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="w-full max-w-xl h-1 bg-accent mb-5"
-            />
+            <motion.div {...rise(0.35)} className="w-full max-w-xl h-1 bg-accent mb-6" />
 
             <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="text-background/80 text-base md:text-lg leading-relaxed mb-10 max-w-lg"
+              {...rise(0.4)}
+              className="text-white/80 text-base md:text-lg leading-relaxed mb-10 max-w-lg"
             >
               A complete estate service from evaluating the assets, conducting the sale, to getting the home and
               property ready for sale.
             </motion.p>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="flex flex-col sm:flex-row flex-wrap gap-4"
-            >
+            <motion.div {...rise(0.5)} className="flex flex-col sm:flex-row flex-wrap gap-4">
               <a
                 href="tel:4129697757"
                 className="inline-flex items-center justify-center gap-3 bg-accent text-white px-8 py-5 font-heading font-black text-xl md:text-2xl uppercase tracking-wider hover:bg-accent/90 transition-colors"
@@ -146,12 +133,14 @@ export default function HeroSection() {
                 <button
                   type="button"
                   onClick={() => setShowForm(true)}
-                  className="inline-flex items-center justify-center gap-2 border-2 border-background text-background px-8 py-5 font-heading font-bold text-lg uppercase tracking-wide hover:bg-background/10 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 border-2 border-white text-white px-8 py-5 font-heading font-bold text-lg uppercase tracking-wide hover:bg-white/10 transition-colors"
                 >
                   Free Evaluation
                   <ChevronRight className="w-5 h-5" />
                 </button>
               )}
+              {/* Smooth by CSS, not by a handler here. See the html rule in
+                  src/index.css and the scroll-margin that clears the fixed nav. */}
               <a
                 href="#services"
                 className="inline-flex items-center justify-center gap-2 border-2 border-accent text-accent px-8 py-5 font-heading font-bold text-lg uppercase tracking-wide hover:bg-accent hover:text-white transition-colors"
@@ -166,6 +155,43 @@ export default function HeroSection() {
                 <HeroLeadForm />
               </div>
             )}
+
+            {sale && (
+              <motion.div
+                initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.65 }}
+                className="mt-10 border-2 border-white/25 bg-white/[0.04] p-5 md:p-6 max-w-xl"
+              >
+                <p className="font-heading text-accent text-xs uppercase tracking-[0.3em] mb-2">Newest Catalog</p>
+                <h3 className="font-heading font-black text-white text-xl md:text-2xl uppercase tracking-tight leading-tight mb-3">
+                  {sale.title}
+                </h3>
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 mb-4">
+                  {dates && (
+                    <span className="inline-flex items-center gap-2 font-heading text-accent text-xs uppercase tracking-wider font-bold">
+                      <Calendar className="w-3.5 h-3.5" />
+                      {dates}
+                    </span>
+                  )}
+                  {where && (
+                    <span className="font-heading text-white/60 text-xs uppercase tracking-wider font-bold">{where}</span>
+                  )}
+                  {count && (
+                    <span className="inline-flex items-center gap-2 font-heading text-white/60 text-xs uppercase tracking-wider font-bold">
+                      <Images className="w-3.5 h-3.5" />
+                      {count} {count === 1 ? "item" : "items"}
+                    </span>
+                  )}
+                </div>
+                <Link
+                  to={`/sale/${sale.slug}`}
+                  className="inline-flex items-center gap-2 font-heading font-black text-xs uppercase tracking-widest text-accent hover:text-white transition-colors"
+                >
+                  View The Catalog <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </motion.div>
+            )}
           </div>
         </div>
       </div>
@@ -174,17 +200,16 @@ export default function HeroSection() {
           inline transform every frame and a snapshot captures whichever value the
           capture happened to land on. The prerender crawl strips the style
           attribute of anything carrying this, which is what makes two builds of
-          one commit byte-identical. Any other infinite animation needs the same
-          attribute — the marquee does NOT, because a CSS animation never writes
-          to the inline style the snapshot reads. */}
+          one commit byte-identical. The grid canvas does NOT need it: a canvas
+          paints pixels and never writes to the inline style the snapshot reads. */}
       <motion.div
         data-loop-animation
         className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 pointer-events-none"
         animate={{ y: [0, 8, 0] }}
         transition={{ duration: 2, repeat: Infinity }}
       >
-        <ArrowDown className="w-6 h-6 text-background/40" />
+        <ArrowDown className="w-6 h-6 text-white/40" />
       </motion.div>
-    </section>
+    </KineticGrid>
   );
 }

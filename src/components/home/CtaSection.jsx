@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Phone, Send, CheckCircle } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Phone, Send, CheckCircle, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -189,6 +190,28 @@ export default function CtaSection() {
               </a>
             </div>
           </form>
+        </motion.div>
+
+        {/* The last thing on the page, and the second half of moving this button
+            out of the hero. Somebody who read to the bottom of the form and did
+            not fill it in is exactly who should be offered something else to look
+            at rather than the end of the page.
+
+            White on the accent band, because the outlined-accent treatment it
+            wears inside How It Works would be invisible here. */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mt-10"
+        >
+          <Link
+            to="/upcoming-sales"
+            className="inline-flex items-center justify-center gap-2 border-2 border-white text-white px-8 py-4 font-heading font-bold text-lg uppercase tracking-wide hover:bg-white hover:text-accent transition-colors"
+          >
+            See Upcoming Sales
+            <ArrowRight className="w-5 h-5" />
+          </Link>
         </motion.div>
       </div>
     </section>

@@ -1,6 +1,6 @@
 import React from "react";
-import NewestCatalogSection from "../components/home/NewestCatalogSection";
 import HeroSection from "../components/home/HeroSection";
+import InventoryMarquee from "../components/home/InventoryMarquee";
 import CategoriesPreview from "../components/home/CategoriesPreview";
 import HowItWorksSection from "../components/home/HowItWorksSection";
 import CtaSection from "../components/home/CtaSection";
@@ -21,11 +21,15 @@ export default function Home() {
 
   return (
     <div>
-      {/* Above the hero on Ben's call: the newest catalog is the first thing on
-          the site. It shares SALES_QUERY_KEY with UpcomingSalesSection below, so
-          the two cost one request between them, not two. */}
-      <NewestCatalogSection />
+      {/* ONE opening screen, not two. The kinetic grid is the hero's background
+          and the hero's own copy sits on it; the newest catalog appears inside it
+          as a strip when the tool has published one. HeroSection shares
+          SALES_QUERY_KEY with UpcomingSalesSection below, so the two cost one
+          request between them rather than asking the platform twice. */}
       <HeroSection />
+      {/* A 55vh band, not a second full screen: the marquee introduces the
+          categories that What We Buy then lists in text. */}
+      <InventoryMarquee />
       <UpcomingSalesSection />
       <CategoriesPreview />
       <HowItWorksSection />
