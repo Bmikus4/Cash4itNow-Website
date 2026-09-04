@@ -77,7 +77,7 @@ const firstKey = (object, keys) => keys.find((key) => object[key] !== undefined)
  * must never reach a public page. Not reading them means a publication bug
  * cannot leak them through this consumer even if they arrive.
  */
-function normaliseItem(entry, index) {
+export function normaliseItem(entry, index) {
   if (typeof entry === "string") return entry ? { id: `i${index}`, imageUrl: entry, title: "" } : null;
   if (!entry || typeof entry !== "object") return null;
   const imageUrl = entry.imageUrl || entry.image || entry.url;
@@ -161,4 +161,16 @@ export function readCatalog(catalog) {
   // sharpest edge — before row 59 it returned absent, which reported a live
   // channel as no channel.
   return { state: CATALOG_PENDING, items: [], count: null, reference: null };
+}
+
+/**
+ * The same normalisation, applied to a list.
+ *
+ * Exported so `catalogFeed.js` reads the published items through THIS function rather than growing
+ * a second one. Two normalisers is how the rule above — that nothing internal is ever read — stops
+ * being true on one of the two paths, and the one that drifts would be the one nobody re-checked.
+ */
+export function normalisePublicItems(entries) {
+  if (!Array.isArray(entries)) return [];
+  return entries.map(normaliseItem).filter(Boolean);
 }

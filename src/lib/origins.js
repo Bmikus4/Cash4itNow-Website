@@ -49,6 +49,12 @@ export function resolveOrigins(env = {}) {
     site,
     leadEndpoint: `${api}/api/public/lead`,
     salesEndpoint: `${api}/api/public/sales`,
+    /**
+     * The items of one published catalogue. Takes `?slug=`, which is the slug the SALES feed
+     * publishes on each sale — the id is the platform's and the slug is the thing already on a
+     * public URL.
+     */
+    catalogEndpoint: `${api}/api/public/catalog`,
     /** Every host the browser is allowed to fetch from; `'self'` is added by the CSP. */
     connectOrigins: [api],
   };

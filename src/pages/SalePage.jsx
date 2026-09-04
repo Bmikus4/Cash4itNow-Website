@@ -12,7 +12,9 @@ import SalesUnavailableNotice from "@/components/sales/SalesUnavailableNotice";
 import { usePageMeta } from "@/lib/usePageMeta";
 import { useJsonLd, breadcrumbGraph, saleEventGraph } from "@/lib/structuredData";
 
-import { readCatalog, CATALOG_ABSENT, CATALOG_EMPTY, CATALOG_PENDING } from "@/api/catalogChannel";
+import { readCatalog, CATALOG_ABSENT, CATALOG_EMPTY, CATALOG_PENDING, CATALOG_ITEMS } from "@/api/catalogChannel";
+import { catalogQuery } from "@/api/catalogClient";
+import { FEED_ITEMS, FEED_EMPTY } from "@/api/catalogFeed";
 
 export default function SalePage() {
   const { slug } = useParams();
@@ -21,6 +23,39 @@ export default function SalePage() {
   const sale = [...(data?.upcoming ?? []), ...(data?.past ?? [])].find((s) => s.slug === slug);
   const isUpcoming = (data?.upcoming ?? []).some((s) => s.slug === slug);
   const mode = salePageMode(data, sale);
+
+  /*
+   * READ HERE RATHER THAN AFTER THE EARLY RETURNS, because the request below is a hook and a hook
+   * cannot sit behind a `return`. `readCatalog(undefined)` answers ABSENT, which is the right
+   * reading of a sale we do not have yet.
+   */
+  const channel = readCatalog(sale?.catalog);
+
+  /*
+   * THE SECOND REQUEST, AND IT IS ONLY EVER MADE FOR A SALE THAT SAYS THERE IS SOMETHING TO FETCH.
+   *
+   * `CATALOG_PENDING` means the sales feed published a catalogue reference and did not carry the
+   * items -- which is the state EVERY real sale has been in since launch, because nothing on this
+   * site had ever asked the second question. ABSENT and EMPTY are final answers already; asking
+   * anyway would put a request on every sale page to be told what the page knew before it started.
+   */
+  const items = useQuery(catalogQuery(channel.reference, channel.state === CATALOG_PENDING));
+
+  /*
+   * THE LOOKUP CAN ONLY IMPROVE THE PAGE, NEVER WORSEN IT.
+   *
+   * `PENDING` is already an honest sentence -- "catalogued, not published yet" -- so only a feed
+   * that actually ANSWERED may move the page off it. A 404, a 503, an unreachable host and a body
+   * nobody can parse all leave it exactly where it was. Collapsing any of those into "no photos"
+   * would be F3d again: a confident falsehood assembled from a failure to ask.
+   */
+  const feed = items.data;
+  const catalog =
+    channel.state === CATALOG_PENDING && feed?.state === FEED_ITEMS
+      ? { ...channel, state: CATALOG_ITEMS, items: feed.items, count: feed.count }
+      : channel.state === CATALOG_PENDING && feed?.state === FEED_EMPTY
+        ? { ...channel, state: CATALOG_EMPTY, items: [], count: 0 }
+        : channel;
 
   // Before the early returns: the loading and not-found states are pages a
   // person can sit on, and they need a title too. The town is in it because
@@ -95,8 +130,6 @@ export default function SalePage() {
       </div>
     );
   }
-
-  const catalog = readCatalog(sale.catalog);
 
   return (
     <div className="min-h-screen bg-background">
@@ -207,7 +240,23 @@ export default function SalePage() {
                 Saying "no photos" here would state the opposite of what we were
                 just told. The count is printed only when the feed gave one — an
                 unknown count is not zero. */}
-            {catalog.state === CATALOG_PENDING && (
+            {/* Still asking. A skeleton rather than the pending sentence, because that sentence
+                makes a claim -- "not published yet" -- and we have not heard back. Printing it and
+                then replacing it with forty photographs a moment later would be a page that
+                contradicts itself in front of the visitor. */}
+            {catalog.state === CATALOG_PENDING && items.isFetching && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3" aria-busy="true">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-48 border-2 border-foreground/10 bg-foreground/5 animate-pulse" />
+                ))}
+              </div>
+            )}
+
+            {/* The catalogue exists and its photographs are not on this page: either the feed said
+                so, or asking failed. Saying "no photos" here would state the opposite of what the
+                sales feed just told us. The count is printed only when the feed gave one — an
+                unknown count is not zero. */}
+            {catalog.state === CATALOG_PENDING && !items.isFetching && (
               <p className="text-muted-foreground text-sm">
                 {catalog.count
                   ? `${catalog.count} items are catalogued for this sale. The photographs are not published yet — `
