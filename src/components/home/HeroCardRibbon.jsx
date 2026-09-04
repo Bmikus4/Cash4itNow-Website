@@ -80,43 +80,35 @@ const BAND_DEG = -22;
  *
  * A MASK is the fix rather than another overlay, because a mask removes the
  * cards instead of covering them — what shows through where the ribbon fades is
- * the grid, not paint. Both axes are masked so the band dissolves on all four
- * sides rather than being cut off by the container's overflow.
+ * the grid, not paint.
  *
- * THE FALLOFF IS IN PIXELS, NOT PERCENT, and that is the fix for "way too much
- * spread". A percentage ramp is a fraction of the BOX, so 8% of a 900px hero is
- * a 72px smear that grows with the viewport — most of a card at every size, and
- * more of one on a wide monitor. A fixed 32px is a literal edge: the cards are
- * themselves everywhere except the last third of an inch, and the ramp does not
- * change when the window does.
+ * THE FALLOFF IS IN PIXELS, NOT PERCENT. A percentage ramp is a fraction of the
+ * BOX, so 8% of a 900px hero was a 72px smear that grew with the viewport — most
+ * of a card at every size, and more of one on a wide monitor. A fixed distance is
+ * a literal edge and does not change when the window does.
  *
- * The two are combined with mask-composite: intersect (WebKit spells the same
- * thing source-in), so a pixel survives only where BOTH gradients keep it.
+ * ONLY THE VERTICAL AXIS IS MASKED HERE. The horizontal ends belong to the rows,
+ * because each row needs its own — see rowFade. Masking both here as well would
+ * ramp the outer rows twice at the same edge.
  */
-const EDGE_PX = 32;
+const EDGE_PX = 44;
 
-const FADE_X = `linear-gradient(to right, transparent 0px, #000 ${EDGE_PX}px, #000 calc(100% - ${EDGE_PX}px), transparent 100%)`;
 const FADE_Y = `linear-gradient(to bottom, transparent 0px, #000 ${EDGE_PX}px, #000 calc(100% - ${EDGE_PX}px), transparent 100%)`;
 const DISSOLVE = {
-  maskImage: `${FADE_X}, ${FADE_Y}`,
-  WebkitMaskImage: `${FADE_X}, ${FADE_Y}`,
-  maskComposite: "intersect",
-  WebkitMaskComposite: "source-in",
+  maskImage: FADE_Y,
+  WebkitMaskImage: FADE_Y,
   maskSize: "100% 100%",
   WebkitMaskSize: "100% 100%",
   maskRepeat: "no-repeat",
   WebkitMaskRepeat: "no-repeat",
 };
 
-/** How far a row's own fade runs, and the one "edge unit" in this file. */
-const ROW_FADE_PX = 32;
+/** How far a row's own fade runs, along the row. */
+const ROW_FADE_PX = 44;
 
 /**
  * HOW MUCH OF A ROW IS OFF SCREEN AT EACH END, as a fraction of the row's own
- * width. The first attempt at the stagger inset each row by a fixed amount from
- * its OWN ends and changed nothing visible, because those ends are nowhere near
- * the screen: the band is 190% of the box, so most of every row is already
- * clipped. The inset has to be measured against the part that is visible.
+ * width, for a row through the middle of the box.
  *
  * It is a constant rather than a measurement because the geometry is
  * scale-invariant. The band is BAND_WIDTH_RATIO of the box in every direction,
@@ -127,44 +119,63 @@ const ROW_FADE_PX = 32;
  *   clipped per side   = (1 - 0.568) / 2                        = 0.216
  */
 const BAND_WIDTH_RATIO = 1.9;
-const ROW_CLIPPED_FRACTION = (1 - 1 / (BAND_WIDTH_RATIO * Math.cos((BAND_DEG * Math.PI) / 180))) / 2;
+const BAND_RAD = (BAND_DEG * Math.PI) / 180;
+const ROW_CLIPPED_FRACTION = (1 - 1 / (BAND_WIDTH_RATIO * Math.cos(BAND_RAD))) / 2;
 
 /**
- * THE STAGGER, AND IT IS MEANT TO BE BARELY THERE. The top and bottom rows start
- * their fade one edge-unit before the middle row does, so the three ends are not
- * flush. That is the whole effect: at 1440 it is 32px on a row 963px long, about
- * three percent.
+ * WHY THE TWO ENDS OF A ROW ARE NOT INSET BY THE SAME AMOUNT, which is the bug
+ * Ben spotted as "you may have moved them the wrong way".
  *
- * IT WAS A WHOLE CARD FIRST and that was far too much — Ben: "they should have
- * been incredibly slight". A 204px bite turned the block into a pronounced
- * lozenge, and on a phone, where a visible row is only 421px, it left 13px of
- * row and read as the outer two rows being absent entirely. That needed a clamp
- * to stay safe. One edge-unit needs none: 32px cannot erase a row at any width,
- * so the clamp is gone with it and the number is a number again.
+ * Only the middle row runs through the centre of the box. The other two are
+ * offset perpendicular to their own direction, and because they are rotated,
+ * that perpendicular offset also slides them SIDEWAYS: the top row's midpoint
+ * sits about 115px right of the box's centre and the bottom row's about 115px
+ * left of it. So the part of a row you can see is not centred on the row, and
+ * taking the same number of pixels off each END of the row takes different
+ * amounts off each end of what is actually ON SCREEN. It reads as the row having
+ * been shifted rather than shortened.
+ *
+ * The correction is that sideways slide, which is d * tan(BAND_DEG) for a row at
+ * perpendicular offset d. Add it to one end and subtract it from the other and
+ * the visible segment is trimmed evenly, which is what Ben asked for: every row
+ * ending on the same two lines, the outer two just slightly shorter.
+ */
+const rowOffset = (index) => (index - (ROWS.length - 1) / 2) * ROW_PITCH;
+const rowShift = (index) => Math.tan(BAND_RAD) * rowOffset(index);
+
+/**
+ * THE STAGGER, AND IT IS MEANT TO BE BARELY THERE. The top and bottom rows give
+ * up this much at each visible end and the middle row gives up none, so the three
+ * are the same length bar a hair. It was a whole card once and then 32px; Ben:
+ * "SLIGHTLY smaller, like slightly".
  *
  * It is an INSET ON THE MASK, not on the layout. Padding the row would change
  * its width, and the wrap that makes the loop seamless is computed from the item
  * count times SPAN — shortening the track would put a visible seam in the two
  * outer rows. Masking leaves the track exactly as long and stops drawing sooner.
  */
-const STAGGER_PX = ROW_FADE_PX;
+const STAGGER_PX = 24;
 const isOuterRow = (index) => index === 0 || index === ROWS.length - 1;
 const CLIPPED_CSS = `${(ROW_CLIPPED_FRACTION * 100).toFixed(2)}%`;
 
-/** The dead length at each end of a row, in px, given its measured width. */
-function rowInset(index, rowWidth) {
-  return isOuterRow(index) ? ROW_CLIPPED_FRACTION * rowWidth + STAGGER_PX : 0;
+/** Dead length at a row's left and right ends, in px, given its measured width. */
+function rowInsets(index, rowWidth) {
+  const base = ROW_CLIPPED_FRACTION * rowWidth + (isOuterRow(index) ? STAGGER_PX : 0);
+  return { left: base + rowShift(index), right: base - rowShift(index) };
 }
 
-/** Fades one row out along its own direction of travel, inside the box mask. */
+/** Fades one row out along its own direction of travel. */
 function rowFade(index) {
-  const flat = isOuterRow(index) ? `calc(${CLIPPED_CSS} + ${STAGGER_PX}px)` : "0px";
-  const solid = isOuterRow(index)
-    ? `calc(${CLIPPED_CSS} + ${STAGGER_PX + ROW_FADE_PX}px)`
-    : `${ROW_FADE_PX}px`;
+  const bite = isOuterRow(index) ? STAGGER_PX : 0;
+  const left = rowShift(index) + bite;
+  const right = -rowShift(index) + bite;
+  const px = (n) => `${n.toFixed(1)}px`;
   return (
-    `linear-gradient(to right, transparent 0px, transparent ${flat}, #000 ${solid}, ` +
-    `#000 calc(100% - ${solid}), transparent calc(100% - ${flat}), transparent 100%)`
+    `linear-gradient(to right, ` +
+    `transparent 0px, transparent calc(${CLIPPED_CSS} + ${px(left)}), ` +
+    `#000 calc(${CLIPPED_CSS} + ${px(left + ROW_FADE_PX)}), ` +
+    `#000 calc(100% - ${CLIPPED_CSS} - ${px(right + ROW_FADE_PX)}), ` +
+    `transparent calc(100% - ${CLIPPED_CSS} - ${px(right)}), transparent 100%)`
   );
 }
 
@@ -206,11 +217,12 @@ function rowFade(index) {
 function rowAtPoint(clientX, clientY, box, band) {
   if (!box || !band) return -1;
 
-  // 1a. The box mask, in the container's own axis-aligned space.
+  // 1a. The box mask, which is vertical only — the horizontal ends belong to the
+  // rows and are checked below, in the space they are actually applied in.
   const b = box.getBoundingClientRect();
   const bx = clientX - b.left;
   const by = clientY - b.top;
-  if (bx < EDGE_PX || bx > b.width - EDGE_PX) return -1;
+  if (bx < 0 || bx > b.width) return -1;
   if (by < EDGE_PX || by > b.height - EDGE_PX) return -1;
 
   const rect = band.getBoundingClientRect();
@@ -238,8 +250,9 @@ function rowAtPoint(clientX, clientY, box, band) {
 
   // 1b + 3. The row mask, along the rotated row, inset by the stagger.
   const rowX = localX + width / 2;
-  const dead = rowInset(index, width) + ROW_FADE_PX;
-  if (rowX < dead || rowX > width - dead) return -1;
+  const dead = rowInsets(index, width);
+  if (rowX < dead.left + ROW_FADE_PX) return -1;
+  if (rowX > width - dead.right - ROW_FADE_PX) return -1;
 
   return index;
 }
