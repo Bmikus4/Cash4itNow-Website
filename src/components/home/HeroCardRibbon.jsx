@@ -108,26 +108,15 @@ const DISSOLVE = {
   WebkitMaskRepeat: "no-repeat",
 };
 
-/**
- * THE STAGGER. The top and bottom rows give up one card at each end, so the
- * three rows form a lozenge rather than a rectangle with three equal edges —
- * Ben's "the rows on the top and bottom should lose a card of size on their
- * fades".
- *
- * It is an INSET ON THE MASK, not on the layout. Padding the row would change
- * its width, and the wrap that makes the loop seamless is computed from the item
- * count times SPAN — shortening the track would put a visible seam in the two
- * outer rows. Masking leaves the track exactly as long and simply stops drawing
- * the last card of it.
- */
+/** How far a row's own fade runs, and the one "edge unit" in this file. */
 const ROW_FADE_PX = 32;
 
 /**
  * HOW MUCH OF A ROW IS OFF SCREEN AT EACH END, as a fraction of the row's own
- * width. The first attempt at the stagger inset each row by one card from its
- * OWN ends and changed nothing visible, because those ends are nowhere near the
- * screen: the band is 190% of the box, so most of every row is already clipped.
- * The inset has to be measured against the part that is actually visible.
+ * width. The first attempt at the stagger inset each row by a fixed amount from
+ * its OWN ends and changed nothing visible, because those ends are nowhere near
+ * the screen: the band is 190% of the box, so most of every row is already
+ * clipped. The inset has to be measured against the part that is visible.
  *
  * It is a constant rather than a measurement because the geometry is
  * scale-invariant. The band is BAND_WIDTH_RATIO of the box in every direction,
@@ -136,53 +125,42 @@ const ROW_FADE_PX = 32;
  *
  *   visible / rowWidth = 1 / (BAND_WIDTH_RATIO * cos(BAND_DEG)) = 0.568
  *   clipped per side   = (1 - 0.568) / 2                        = 0.216
- *
- * So one card off the visible end of a row is 21.6% of it plus SPAN.
  */
 const BAND_WIDTH_RATIO = 1.9;
 const ROW_CLIPPED_FRACTION = (1 - 1 / (BAND_WIDTH_RATIO * Math.cos((BAND_DEG * Math.PI) / 180))) / 2;
 
 /**
- * THE STAGGER. The top and bottom rows give up one card at each visible end, so
- * the three rows read as a lozenge rather than three edges stacked flush — Ben's
- * "the rows on the top and bottom should lose a card of size on their fades".
- * The middle row keeps its full length and is cut only by the box mask.
+ * THE STAGGER, AND IT IS MEANT TO BE BARELY THERE. The top and bottom rows start
+ * their fade one edge-unit before the middle row does, so the three ends are not
+ * flush. That is the whole effect: at 1440 it is 32px on a row 963px long, about
+ * three percent.
+ *
+ * IT WAS A WHOLE CARD FIRST and that was far too much — Ben: "they should have
+ * been incredibly slight". A 204px bite turned the block into a pronounced
+ * lozenge, and on a phone, where a visible row is only 421px, it left 13px of
+ * row and read as the outer two rows being absent entirely. That needed a clamp
+ * to stay safe. One edge-unit needs none: 32px cannot erase a row at any width,
+ * so the clamp is gone with it and the number is a number again.
  *
  * It is an INSET ON THE MASK, not on the layout. Padding the row would change
  * its width, and the wrap that makes the loop seamless is computed from the item
  * count times SPAN — shortening the track would put a visible seam in the two
- * outer rows. Masking leaves the track exactly as long and simply stops drawing
- * the last card of it.
+ * outer rows. Masking leaves the track exactly as long and stops drawing sooner.
  */
+const STAGGER_PX = ROW_FADE_PX;
 const isOuterRow = (index) => index === 0 || index === ROWS.length - 1;
-
-/**
- * THE CARD IS A CEILING, NOT A CONSTANT, and without that the stagger deletes two
- * of the three rows on a phone. A card is a fixed 204px at every viewport, but the
- * VISIBLE length of a row is not: 963px at a 1440 hero, 421px at a 390 one — barely
- * two cards. Taking a whole card off each end there leaves 13px of row, measured,
- * which is 0.06 of a card and reads as the top and bottom rows simply being absent.
- *
- * So the bite is one card OR 22% of the visible length, whichever is smaller. That
- * is 12.5% of the row's own width (22% of 0.568), and it lands on a full card from
- * about 1400px up — where Ben asked for it — and tapers below rather than eating
- * the row. Measured: 2.7 cards of row left at 1440, 1.4 at 1024, 1.2 at 390.
- */
-const STAGGER_CAP_FRACTION = 0.125;
-const staggerPx = (rowWidth) => Math.min(SPAN, STAGGER_CAP_FRACTION * rowWidth);
-const STAGGER_CSS = `min(${SPAN}px, ${(STAGGER_CAP_FRACTION * 100).toFixed(1)}%)`;
 const CLIPPED_CSS = `${(ROW_CLIPPED_FRACTION * 100).toFixed(2)}%`;
 
 /** The dead length at each end of a row, in px, given its measured width. */
 function rowInset(index, rowWidth) {
-  return isOuterRow(index) ? ROW_CLIPPED_FRACTION * rowWidth + staggerPx(rowWidth) : 0;
+  return isOuterRow(index) ? ROW_CLIPPED_FRACTION * rowWidth + STAGGER_PX : 0;
 }
 
 /** Fades one row out along its own direction of travel, inside the box mask. */
 function rowFade(index) {
-  const flat = isOuterRow(index) ? `calc(${CLIPPED_CSS} + ${STAGGER_CSS})` : "0px";
+  const flat = isOuterRow(index) ? `calc(${CLIPPED_CSS} + ${STAGGER_PX}px)` : "0px";
   const solid = isOuterRow(index)
-    ? `calc(${CLIPPED_CSS} + ${STAGGER_CSS} + ${ROW_FADE_PX}px)`
+    ? `calc(${CLIPPED_CSS} + ${STAGGER_PX + ROW_FADE_PX}px)`
     : `${ROW_FADE_PX}px`;
   return (
     `linear-gradient(to right, transparent 0px, transparent ${flat}, #000 ${solid}, ` +
