@@ -5,7 +5,6 @@ import { usePageMeta } from "@/lib/usePageMeta";
 import { useJsonLd, breadcrumbGraph } from "@/lib/structuredData";
 
 const VETERAN_IMG = "/img/69fb4adcd_generated_c67afaf6.webp";
-const ESTATE_IMG = "/img/37a3cc3a9_generated_e3d6fb2b.webp";
 
 const values = [
   { icon: Shield, title: "Veteran Values", description: "Founded on integrity, discipline, and service. We treat every client like family." },
@@ -88,16 +87,24 @@ export default function About() {
 
       {/* Process */}
       <section className="bg-foreground py-14 md:py-20 px-6 md:px-10">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row gap-12 md:gap-16 items-center">
-            <div className="w-full md:w-1/2">
-              <img src={ESTATE_IMG} alt="Estate sale" className="w-full h-64 md:h-[28rem] object-cover" />
-            </div>
-            <div className="w-full md:w-1/2">
-              <h2 className="font-heading font-black text-background text-4xl md:text-5xl uppercase tracking-tight mb-8">
+        {/*
+          NO PHOTOGRAPH BESIDE THIS. It was a generated interior full of antiques
+          filling the left half at 28rem tall, with these three steps in the
+          right half. Removed on Ben's word, and the text is centred in the
+          section rather than left where the image left it.
+
+          The three steps stay LEFT-ALIGNED inside a centred column. Centring the
+          rows themselves would put each number square in a different horizontal
+          position, and the whole point of a numbered sequence is that the
+          numbers line up. So the block is centred; its contents are not.
+        */}
+        <div className="max-w-3xl mx-auto">
+          <div className="flex flex-col items-center">
+            <div className="w-full">
+              <h2 className="font-heading font-black text-background text-4xl md:text-5xl uppercase tracking-tight mb-10 text-center">
                 Simple.<br />Fast. Fair.
               </h2>
-              <div className="space-y-8">
+              <div className="space-y-8 max-w-xl mx-auto">
                 {[
                   { step: "01", title: "Call Us", desc: "Tell us what you have. We give you a quick assessment right on the phone." },
                   { step: "02", title: "We Visit", desc: "We come to your location — house, storage unit, garage, anywhere in Western PA." },
@@ -114,13 +121,15 @@ export default function About() {
                   </div>
                 ))}
               </div>
-              <a
-                href="tel:4129697757"
-                className="inline-flex items-center gap-3 bg-accent text-white px-8 py-4 font-heading font-black text-xl uppercase mt-10 hover:bg-accent/90 transition-colors"
-              >
-                <Phone className="w-5 h-5" />
-                Call Today
-              </a>
+              <div className="text-center">
+                <a
+                  href="tel:4129697757"
+                  className="inline-flex items-center gap-3 bg-accent text-white px-8 py-4 font-heading font-black text-xl uppercase mt-10 hover:bg-accent/90 transition-colors"
+                >
+                  <Phone className="w-5 h-5" />
+                  Call Today
+                </a>
+              </div>
             </div>
           </div>
         </div>
