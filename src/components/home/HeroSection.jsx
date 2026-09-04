@@ -42,20 +42,28 @@ const STANDING_ITEMS = [
 /**
  * HOW MANY OF A CATALOGUE'S PHOTOGRAPHS THE RIBBON TAKES.
  *
- * Not all of them. Gibsonia published 34 and each one is a ~154KB webp served
- * `Cache-Control: private`, so the whole catalogue in the hero is 5.2MB above the
- * fold — and the ribbon cannot show it: one copy of the list has to be at least
- * as long as the band, and past that length the extra cards are simply never on
- * screen at the same time as each other.
+ * PER ROW, and the ribbon has three, so up to 36. It used to be twelve in total,
+ * which was the wrong unit: the three rows each took the whole list and walked it
+ * with their own stride, so a screen showing eighteen cards could only ever show
+ * twelve pictures. Ben, watching that: "each row uses like the same 12 images."
+ * The rows now take a third of the list each (see share() in HeroCardRibbon), so
+ * a row's twelve are twelve nobody else can be showing.
  *
- * Twelve is the number because of what the band needs, not because it is round.
- * Twelve 204px cards make 2448px against a band of about 1530px, so one copy
- * still covers the loop with no seam, and twelve is one of the sizes the stride
- * rule in HeroCardRibbon was searched exhaustively at — worst case five distinct
- * photographs on a twelve-card screen, against three with the rows merely
- * rotated. Raising it costs bytes and buys nothing a visitor can see.
+ * Twelve is what the band needs, not a round number. Twelve 204px cards make
+ * 2448px against a band of about 1530px, so one copy of a row's own list still
+ * covers the loop with no seam, and twelve is one of the sizes the stride rule was
+ * searched exhaustively at for the case where the pool is too small to split.
+ *
+ * THE CEILING IS ABOUT BYTES. Each catalogue photograph is a ~154KB webp served
+ * `Cache-Control: private`, so 36 of them is 5.5MB above the fold and a hundred
+ * would be fifteen. Thirty-six is already more than can be on screen at once —
+ * about eighteen cards are unmasked at 1853 — so raising it buys nothing a visitor
+ * can see.
  */
 const RIBBON_MAX = 12;
+
+/** The rows share the pool, so the pool is that much bigger. Kept in step with ROWS in the ribbon. */
+const RIBBON_ROWS = 3;
 
 /**
  * `count` items taken EVENLY ACROSS the list rather than off the front.
@@ -74,25 +82,26 @@ function spread(list, count) {
 }
 
 /**
- * TWELVE SLOTS. The newest catalogue fills as many as it can and the standing
- * inventory fills the rest.
+ * THIRTY-SIX SLOTS, twelve per row. The newest catalogue fills as many as it can
+ * and the standing inventory fills the rest.
  *
- * Topping up is not a hedge, it is the only way a small catalogue can be shown
- * at all. A sale with two published photographs is a real state — the live feed
- * had one this week — and two photographs in a ribbon that needs twelve is the
- * SAME PICTURE four times in one row, which does not read as "here is the sale",
- * it reads as broken. Twelve distinct images is also what the band needs before a
- * row can stop repeating inside its own visible window.
+ * Topping up is not a hedge, it is the only way a small catalogue can be shown at
+ * all. A sale with two published photographs is a real state — the live feed had
+ * one this week — and two photographs in a ribbon that needs a dozen is the SAME
+ * PICTURE four times in one row, which does not read as "here is the sale", it
+ * reads as broken.
  *
- * Deduplicated by imageUrl, because a standing photograph is one of this
+ * The pool is handed over WHOLE and the ribbon splits it three ways, so a top-up
+ * lands across all three rows rather than turning one of them into the standing
+ * row. Deduplicated by imageUrl, because a standing photograph is one of this
  * business's own and could perfectly well be in the catalogue too.
  */
 function fill(items) {
-  const picked = spread(items, RIBBON_MAX);
-  if (picked.length >= RIBBON_MAX) return picked;
+  const picked = spread(items, RIBBON_MAX * RIBBON_ROWS);
+  if (picked.length >= RIBBON_MAX * RIBBON_ROWS) return picked;
   const seen = new Set(picked.map((item) => item.imageUrl));
   const rest = STANDING_ITEMS.filter((item) => !seen.has(item.imageUrl));
-  return [...picked, ...rest].slice(0, RIBBON_MAX);
+  return [...picked, ...rest].slice(0, RIBBON_MAX * RIBBON_ROWS);
 }
 
 /**

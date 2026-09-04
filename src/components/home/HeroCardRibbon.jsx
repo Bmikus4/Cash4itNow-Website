@@ -383,6 +383,47 @@ function rowAtPoint(clientX, clientY, box, band, m) {
 }
 
 /**
+ * THE FEWEST PHOTOGRAPHS A ROW CAN BE GIVEN ON ITS OWN.
+ *
+ * A row is `bandWidth` long and about 57% of that is unmasked, so at 1440 five or
+ * six of its cards are actually being looked at and at 1853 nearer seven. Eight is
+ * that with room to spare: below it a row would show one of its own photographs
+ * twice at once, which is worse than showing a photograph the row above is also
+ * showing.
+ */
+const MIN_PER_ROW = 8;
+
+/**
+ * THIS ROW'S OWN PHOTOGRAPHS, DISJOINT FROM THE OTHER TWO ROWS'.
+ *
+ * Ben: "because there are three columns each row in the hero should divide the
+ * total number of images in a catalog by 3, each row gets a set number. right now
+ * each row uses like the same 12 images." He is describing exactly what was
+ * happening: every row got the whole list and walked it with its own stride, so
+ * the three rows were three orderings of ONE set of twelve, and a screen showing
+ * eighteen cards could only ever show twelve pictures.
+ *
+ * A third each, taken by INTERLEAVING and not by slicing. A catalogue is entered
+ * in the order somebody photographed the house, so three contiguous thirds are
+ * three rooms — one row of kitchenware, one of bedroom, one of garage. Every
+ * third item spreads each row across the whole sale, and the three sets are still
+ * exactly disjoint, which is the property that matters: no photograph can be on
+ * screen twice at one time, in any row, at any phase, with no arithmetic to trust.
+ *
+ * IT DOES NOT APPLY TO A SMALL POOL, and that is not a hedge either. The standing
+ * inventory is nine photographs; a third of nine is three, and three in a row that
+ * shows six at once is the same picture twice with no drift to hide it. Below the
+ * threshold every row takes the whole list and the strides do the decorrelating
+ * they were searched for — worst case five distinct on a twelve-card screen, which
+ * is the best any arrangement of nine can do. Partitioning is what you do when you
+ * have enough to partition.
+ */
+function share(items, index) {
+  if (items.length < MIN_PER_ROW * ROWS.length) return items;
+  return items.filter((_, k) => k % ROWS.length === index);
+}
+
+/**
  * HOW LONG A ROW TAKES TO STOP, in milliseconds of e-folding.
  *
  * Ben: "when the user presses to stop a card it should smoothly stop". The drift
@@ -418,12 +459,13 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
    * modulo the original nine.
    */
   const strip = useMemo(() => {
-    const n = items.length;
-    if (!n) return items;
+    const mine = share(items, index);
+    const n = mine.length;
+    if (!n) return mine;
     const copies = Math.max(1, Math.ceil(bandWidth / (n * m.span)));
     const stride = strideFor(n, index);
     const out = [];
-    for (let c = 0; c < copies; c++) for (let j = 0; j < n; j++) out.push(items[(stride * j) % n]);
+    for (let c = 0; c < copies; c++) for (let j = 0; j < n; j++) out.push(mine[(stride * j) % n]);
     return out;
   }, [items, bandWidth, m.span, index]);
 
@@ -927,9 +969,10 @@ export default function HeroCardRibbon({ items, sales = [] }) {
             <Ribbon
               key={i}
               index={i}
-              /* The list goes in unrotated: each row walks it with its own
-                 stride instead, which is what keeps the three from showing the
-                 same handful of photographs at once. See strideFor. */
+              /* THE WHOLE LIST GOES IN and the row takes its own third of it:
+                 see share(), which is what makes a photograph in row 0 one that
+                 rows 1 and 2 cannot also be showing. A pool too small to split
+                 falls back to every row walking all of it by its own stride. */
               items={items}
               speed={row.speed}
               direction={row.direction}
