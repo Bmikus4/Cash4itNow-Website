@@ -11,6 +11,8 @@ import KineticGrid from "@/components/ui/kinetic-grid";
 import { salesQuery, saleDateRange, saleLocation, saleStartTime } from "@/api/salesClient";
 import { isDegraded, isSnapshot } from "@/api/salesWire";
 import { readCatalog, CATALOG_ITEMS, CATALOG_PENDING } from "@/api/catalogChannel";
+import { catalogQuery } from "@/api/catalogClient";
+import { FEED_ITEMS } from "@/api/catalogFeed";
 
 /**
  * WHAT FILLS THE RIBBON WHEN NO CATALOG HAS ITEMS IN IT.
@@ -36,6 +38,62 @@ const STANDING_ITEMS = [
   { id: "pens", imageUrl: "/img/63ce2e7e9_generated_image.webp" },
   { id: "uv", imageUrl: "/img/0bf12dc53_generated_image.webp" },
 ];
+
+/**
+ * HOW MANY OF A CATALOGUE'S PHOTOGRAPHS THE RIBBON TAKES.
+ *
+ * Not all of them. Gibsonia published 34 and each one is a ~154KB webp served
+ * `Cache-Control: private`, so the whole catalogue in the hero is 5.2MB above the
+ * fold — and the ribbon cannot show it: one copy of the list has to be at least
+ * as long as the band, and past that length the extra cards are simply never on
+ * screen at the same time as each other.
+ *
+ * Twelve is the number because of what the band needs, not because it is round.
+ * Twelve 204px cards make 2448px against a band of about 1530px, so one copy
+ * still covers the loop with no seam, and twelve is one of the sizes the stride
+ * rule in HeroCardRibbon was searched exhaustively at — worst case five distinct
+ * photographs on a twelve-card screen, against three with the rows merely
+ * rotated. Raising it costs bytes and buys nothing a visitor can see.
+ */
+const RIBBON_MAX = 12;
+
+/**
+ * `count` items taken EVENLY ACROSS the list rather than off the front.
+ *
+ * A catalogue is entered in the order somebody photographed the house, so the
+ * first twelve rows of a 34-item sale are one corner of one room. Spreading the
+ * sample is the difference between "here is what this sale is" and "here is the
+ * shelf they started on". It is a pure function of the length, so two builds of
+ * one commit cannot differ — which is what the prerender crawl exists to catch.
+ */
+function spread(list, count) {
+  if (list.length <= count) return list;
+  const out = [];
+  for (let k = 0; k < count; k++) out.push(list[Math.round((k * list.length) / count)]);
+  return out;
+}
+
+/**
+ * TWELVE SLOTS. The newest catalogue fills as many as it can and the standing
+ * inventory fills the rest.
+ *
+ * Topping up is not a hedge, it is the only way a small catalogue can be shown
+ * at all. A sale with two published photographs is a real state — the live feed
+ * had one this week — and two photographs in a ribbon that needs twelve is the
+ * SAME PICTURE four times in one row, which does not read as "here is the sale",
+ * it reads as broken. Twelve distinct images is also what the band needs before a
+ * row can stop repeating inside its own visible window.
+ *
+ * Deduplicated by imageUrl, because a standing photograph is one of this
+ * business's own and could perfectly well be in the catalogue too.
+ */
+function fill(items) {
+  const picked = spread(items, RIBBON_MAX);
+  if (picked.length >= RIBBON_MAX) return picked;
+  const seen = new Set(picked.map((item) => item.imageUrl));
+  const rest = STANDING_ITEMS.filter((item) => !seen.has(item.imageUrl));
+  return [...picked, ...rest].slice(0, RIBBON_MAX);
+}
 
 /**
  * ONE HERO, on the kinetic grid.
@@ -116,14 +174,27 @@ export default function HeroSection() {
   /*
    * Real catalog photographs the moment the platform publishes any, the standing
    * inventory until then — Ben's "the current items if no catalogs exist, but new
-   * catalog items when catalogs arrive".
+   * catalog items when catalogs arrive", and later, when it was still showing the
+   * standing nine over a sale with 34 published photographs: "home screen should
+   * ALWAYS be populated with the newest catalogs photos".
    *
-   * Only CATALOG_ITEMS qualifies. A catalog in the PENDING state has told us how
-   * many items it holds and sent none of them, which is exactly today's live
-   * shape ({slug, itemCount}), and there is nothing to put in a card. Falling
-   * back is right there: an empty ribbon would be a worse answer than the
-   * standing one, and a placeholder card per promised item would be inventing
-   * photographs the feed never sent.
+   * IT TOOK A SECOND REQUEST, and that is why it had never happened. The sales
+   * feed carries a catalogue REFERENCE and not its items — {slug, itemCount} — so
+   * every real sale reads as CATALOG_PENDING here, and the hero treated PENDING
+   * as the end of the road. It is not: /api/public/catalog?slug= answers with the
+   * items, which is the same second question SalePage has been asking since it
+   * shipped. The hero now asks it too, for the newest sale only.
+   *
+   * The request is made ONLY for a reference that says there is something to
+   * fetch. ABSENT and EMPTY are final answers, and a snapshot or a degraded sales
+   * feed leaves `sale` null, so the prerendered HTML asks nothing and ships the
+   * standing inventory — the same rule the rest of this page runs on.
+   *
+   * A FAILED LOOKUP CANNOT MAKE THE HERO WORSE than it was: only FEED_ITEMS moves
+   * it off the standing photographs. A 404, a 503, an unreachable host and an
+   * unparseable body all leave the ribbon exactly as it was, because an empty
+   * ribbon would be a worse answer than the standing one and a placeholder card
+   * per promised item would be inventing photographs the feed never sent.
    */
   /*
    * THE SALE CARDS THAT SIT IN THE RIBBON, one per row, ALWAYS.
@@ -173,8 +244,17 @@ export default function HeroSection() {
   }, [trustworthy, data]);
 
   const published = sale ? readCatalog(sale.catalog) : null;
-  const ribbonItems =
-    published?.state === CATALOG_ITEMS && published.items.length ? published.items : STANDING_ITEMS;
+  const publishedItems = useQuery(
+    catalogQuery(published?.reference, published?.state === CATALOG_PENDING)
+  );
+  const ribbonItems = useMemo(() => {
+    const inline = published?.state === CATALOG_ITEMS ? published.items : [];
+    const fetched =
+      published?.state === CATALOG_PENDING && publishedItems.data?.state === FEED_ITEMS
+        ? publishedItems.data.items
+        : [];
+    return fill(inline.length ? inline : fetched);
+  }, [published?.state, published?.items, publishedItems.data]);
 
   const rise = (delay) =>
     reduceMotion
