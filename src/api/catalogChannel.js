@@ -69,23 +69,47 @@ const firstKey = (object, keys) => keys.find((key) => object[key] !== undefined)
 
 /**
  * Accepts a bare image URL or an object carrying one, and skips anything else
- * rather than rendering a broken tile. Only what the page actually draws is
- * taken: an id if there is one, a title, and one image.
+ * rather than rendering a broken tile. An image is still REQUIRED: an entry
+ * without one is skipped no matter what else it carries, because every surface
+ * reading this draws a tile.
  *
  * NOTHING INTERNAL IS READ HERE, and that is deliberate rather than incidental —
  * `containerDescription` and `internalNotes` exist on the platform's side and
  * must never reach a public page. Not reading them means a publication bug
  * cannot leak them through this consumer even if they arrive.
+ *
+ * WHY THIS READS MORE THAN THE GALLERY DRAWS. The sale gallery needs an image and
+ * a title; the shop card also needs the price, the condition and the blurb. The
+ * temptation is a second normaliser for the shop — and a second normaliser is
+ * exactly how the rule above stops being true on one of the two paths, because
+ * the one that drifts is the one nobody re-checks. So there is ONE, and it takes
+ * the platform's whole public item shape (`toPublicCatalogItem`): id, title,
+ * description, category, condition, quantity, askingPrice, imageUrl. The list is
+ * an allowlist, which is what keeps the rule enforceable — a field is readable
+ * here because it is public, not because a page wanted it. Callers ignore what
+ * they do not draw.
  */
 export function normaliseItem(entry, index) {
   if (typeof entry === "string") return entry ? { id: `i${index}`, imageUrl: entry, title: "" } : null;
   if (!entry || typeof entry !== "object") return null;
   const imageUrl = entry.imageUrl || entry.image || entry.url;
   if (typeof imageUrl !== "string" || !imageUrl) return null;
+  const text = (value) => (typeof value === "string" && value ? value : null);
+  const money = (value) => {
+    const n = typeof value === "string" ? Number(value) : value;
+    return typeof n === "number" && Number.isFinite(n) ? n : null;
+  };
   return {
     id: typeof entry.id === "string" || typeof entry.id === "number" ? String(entry.id) : `i${index}`,
     imageUrl,
     title: typeof entry.title === "string" ? entry.title : "",
+    description: text(entry.description),
+    category: text(entry.category),
+    condition: text(entry.condition),
+    // Decimal columns cross JSON as strings; a card that renders `askingPrice`
+    // straight would print "1100.00" or, worse, compare it as a string.
+    askingPrice: money(entry.askingPrice),
+    quantity: money(entry.quantity) ?? 1,
   };
 }
 
