@@ -83,16 +83,20 @@ const BAND_DEG = -22;
  * the grid, not paint. Both axes are masked so the band dissolves on all four
  * sides rather than being cut off by the container's overflow.
  *
- * THE FALLOFF IS SHORT, on Ben's call: the fade was 34% of the box on the left
- * and is 8% now. Long ramps left most of the ribbon at partial alpha, so the
- * cards read as washed out rather than as cards that end. Short ramps mean the
- * cards are themselves almost everywhere and only let go at the very edge.
+ * THE FALLOFF IS IN PIXELS, NOT PERCENT, and that is the fix for "way too much
+ * spread". A percentage ramp is a fraction of the BOX, so 8% of a 900px hero is
+ * a 72px smear that grows with the viewport — most of a card at every size, and
+ * more of one on a wide monitor. A fixed 32px is a literal edge: the cards are
+ * themselves everywhere except the last third of an inch, and the ramp does not
+ * change when the window does.
  *
  * The two are combined with mask-composite: intersect (WebKit spells the same
  * thing source-in), so a pixel survives only where BOTH gradients keep it.
  */
-const FADE_X = "linear-gradient(to right, transparent 0%, #000 8%, #000 94%, transparent 100%)";
-const FADE_Y = "linear-gradient(to bottom, transparent 0%, #000 7%, #000 93%, transparent 100%)";
+const EDGE_PX = 32;
+
+const FADE_X = `linear-gradient(to right, transparent 0px, #000 ${EDGE_PX}px, #000 calc(100% - ${EDGE_PX}px), transparent 100%)`;
+const FADE_Y = `linear-gradient(to bottom, transparent 0px, #000 ${EDGE_PX}px, #000 calc(100% - ${EDGE_PX}px), transparent 100%)`;
 const DISSOLVE = {
   maskImage: `${FADE_X}, ${FADE_Y}`,
   WebkitMaskImage: `${FADE_X}, ${FADE_Y}`,
@@ -104,8 +108,72 @@ const DISSOLVE = {
   WebkitMaskRepeat: "no-repeat",
 };
 
-/** Fades each row out along its own direction of travel, before the box mask. */
-const ROW_FADE = "linear-gradient(to right, transparent 0%, #000 4%, #000 96%, transparent 100%)";
+/**
+ * THE STAGGER. The top and bottom rows give up one card at each end, so the
+ * three rows form a lozenge rather than a rectangle with three equal edges —
+ * Ben's "the rows on the top and bottom should lose a card of size on their
+ * fades".
+ *
+ * It is an INSET ON THE MASK, not on the layout. Padding the row would change
+ * its width, and the wrap that makes the loop seamless is computed from the item
+ * count times SPAN — shortening the track would put a visible seam in the two
+ * outer rows. Masking leaves the track exactly as long and simply stops drawing
+ * the last card of it.
+ */
+const ROW_FADE_PX = 32;
+
+/**
+ * HOW MUCH OF A ROW IS OFF SCREEN AT EACH END, as a fraction of the row's own
+ * width. The first attempt at the stagger inset each row by one card from its
+ * OWN ends and changed nothing visible, because those ends are nowhere near the
+ * screen: the band is 190% of the box, so most of every row is already clipped.
+ * The inset has to be measured against the part that is actually visible.
+ *
+ * It is a constant rather than a measurement because the geometry is
+ * scale-invariant. The band is BAND_WIDTH_RATIO of the box in every direction,
+ * and the box's width cuts across a row rotated by BAND_DEG, so the visible
+ * length of a row is boxWidth / cos(BAND_DEG) whatever the viewport is doing:
+ *
+ *   visible / rowWidth = 1 / (BAND_WIDTH_RATIO * cos(BAND_DEG)) = 0.568
+ *   clipped per side   = (1 - 0.568) / 2                        = 0.216
+ *
+ * So one card off the visible end of a row is 21.6% of it plus SPAN.
+ */
+const BAND_WIDTH_RATIO = 1.9;
+const ROW_CLIPPED_FRACTION = (1 - 1 / (BAND_WIDTH_RATIO * Math.cos((BAND_DEG * Math.PI) / 180))) / 2;
+
+/**
+ * THE STAGGER. The top and bottom rows give up one card at each visible end, so
+ * the three rows read as a lozenge rather than three edges stacked flush — Ben's
+ * "the rows on the top and bottom should lose a card of size on their fades".
+ * The middle row keeps its full length and is cut only by the box mask.
+ *
+ * It is an INSET ON THE MASK, not on the layout. Padding the row would change
+ * its width, and the wrap that makes the loop seamless is computed from the item
+ * count times SPAN — shortening the track would put a visible seam in the two
+ * outer rows. Masking leaves the track exactly as long and simply stops drawing
+ * the last card of it.
+ */
+const isOuterRow = (index) => index === 0 || index === ROWS.length - 1;
+
+/** The dead length at each end of a row, in px, given its measured width. */
+function rowInset(index, rowWidth) {
+  return isOuterRow(index) ? ROW_CLIPPED_FRACTION * rowWidth + SPAN : 0;
+}
+
+/** Fades one row out along its own direction of travel, inside the box mask. */
+function rowFade(index) {
+  const flat = isOuterRow(index)
+    ? `calc(${(ROW_CLIPPED_FRACTION * 100).toFixed(2)}% + ${SPAN}px)`
+    : "0px";
+  const solid = isOuterRow(index)
+    ? `calc(${(ROW_CLIPPED_FRACTION * 100).toFixed(2)}% + ${SPAN + ROW_FADE_PX}px)`
+    : `${ROW_FADE_PX}px`;
+  return (
+    `linear-gradient(to right, transparent 0px, transparent ${flat}, #000 ${solid}, ` +
+    `#000 calc(100% - ${solid}), transparent calc(100% - ${flat}), transparent 100%)`
+  );
+}
 
 /**
  * Which row, if any, is under a page-space point.
@@ -116,15 +184,42 @@ const ROW_FADE = "linear-gradient(to right, transparent 0%, #000 4%, #000 96%, t
  * browser's own hit-testing would let a card nobody can see swallow a click.
  * getBoundingClientRect is no use either — the rows are rotated, so all three
  * axis-aligned boxes overlap almost completely and every point would match every
- * row.
+ * row. So the point is rotated back into the band's own coordinates, where the
+ * rows are plain horizontal strips.
  *
- * So the point is rotated back into the band's own coordinates, where the rows
- * are plain horizontal strips. A point in the GAP between two rows belongs to
- * neither, which is deliberate: the wheel is only captured over a row, so the
- * page still scrolls from the space between them.
+ * THE REGION IS WRAPPED TIGHT ROUND THE CARDS. Ben's rule, in his words: spaces
+ * between cards scroll, space outside a card does not, and a card that has begun
+ * to fade does not. That is three tests:
+ *
+ *   1. Not inside either mask's ramp. Both are checked in the space each one is
+ *      actually applied in — the box mask is axis-aligned in the container, the
+ *      row mask runs along the rotated row — because a single test in one space
+ *      would be wrong about the other by up to the band's rotation.
+ *   2. Inside the band's vertical extent, which spans the first row's top to the
+ *      last row's bottom and therefore INCLUDES the gaps between rows. Those are
+ *      spaces between cards, so they scroll.
+ *   3. Inside that row's own unfaded length, which is shorter for the staggered
+ *      top and bottom rows by exactly the card they gave up.
+ *
+ * WHAT IS DELIBERATELY NOT TESTED is which individual card is under the pointer.
+ * The cards drift, so a stationary cursor would cross a card edge every couple of
+ * seconds and the row would stutter between paused and running on its own. The
+ * horizontal gaps between cards ride inside the row strip and scroll for free,
+ * which is the behaviour asked for anyway.
+ *
+ * A point in the gap between two rows drives the NEARER row, so the wheel always
+ * does something and always the same thing at a given spot.
  */
-function rowAtPoint(clientX, clientY, band) {
-  if (!band) return -1;
+function rowAtPoint(clientX, clientY, box, band) {
+  if (!box || !band) return -1;
+
+  // 1a. The box mask, in the container's own axis-aligned space.
+  const b = box.getBoundingClientRect();
+  const bx = clientX - b.left;
+  const by = clientY - b.top;
+  if (bx < EDGE_PX || bx > b.width - EDGE_PX) return -1;
+  if (by < EDGE_PX || by > b.height - EDGE_PX) return -1;
+
   const rect = band.getBoundingClientRect();
   const dx = clientX - (rect.left + rect.right) / 2;
   const dy = clientY - (rect.top + rect.bottom) / 2;
@@ -136,12 +231,24 @@ function rowAtPoint(clientX, clientY, band) {
 
   const width = band.offsetWidth;
   const height = band.offsetHeight;
-  if (Math.abs(localX) > width / 2 || Math.abs(localY) > height / 2) return -1;
+
+  // 2. Top of the first row to the bottom of the last, gaps included.
+  if (Math.abs(localY) > height / 2) return -1;
 
   const fromTop = localY + height / 2;
-  const index = Math.floor(fromTop / ROW_PITCH);
-  if (index < 0 || index >= ROWS.length) return -1;
-  return fromTop - index * ROW_PITCH <= CARD_H ? index : -1;
+  let index = Math.min(ROWS.length - 1, Math.max(0, Math.floor(fromTop / ROW_PITCH)));
+  const withinRow = fromTop - index * ROW_PITCH;
+  if (withinRow > CARD_H && index + 1 < ROWS.length) {
+    const toNextRow = ROW_PITCH - withinRow;
+    if (toNextRow < withinRow - CARD_H) index += 1;
+  }
+
+  // 1b + 3. The row mask, along the rotated row, inset by the stagger.
+  const rowX = localX + width / 2;
+  const dead = rowInset(index, width) + ROW_FADE_PX;
+  if (rowX < dead || rowX > width - dead) return -1;
+
+  return index;
 }
 
 function Ribbon({ items, speed, direction, index, paused, register, reduceMotion }) {
@@ -207,7 +314,7 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
   });
 
   return (
-    <div className="overflow-hidden" style={{ maskImage: ROW_FADE, WebkitMaskImage: ROW_FADE }}>
+    <div className="overflow-hidden" style={{ maskImage: rowFade(index), WebkitMaskImage: rowFade(index) }}>
       <motion.div className="flex" style={{ x, gap: GAP, skewX: reduceMotion ? 0 : skew }}>
         {[...items, ...items].map((item, i) => (
           <div
@@ -231,6 +338,7 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
 
 export default function HeroCardRibbon({ items }) {
   const reduceMotion = useReducedMotion();
+  const boxRef = useRef(null);
   const bandRef = useRef(null);
   const pushers = useRef([]);
   const [hovered, setHovered] = useState(-1);
@@ -268,13 +376,13 @@ export default function HeroCardRibbon({ items }) {
     if (!window.matchMedia?.("(hover: hover) and (pointer: fine)").matches) return undefined;
 
     const onWheel = (event) => {
-      const index = rowAtPoint(event.clientX, event.clientY, bandRef.current);
+      const index = rowAtPoint(event.clientX, event.clientY, boxRef.current, bandRef.current);
       if (index < 0) return;
       event.preventDefault();
       pushers.current[index]?.(event.deltaY);
     };
     const onMove = (event) => {
-      setHovered(rowAtPoint(event.clientX, event.clientY, bandRef.current));
+      setHovered(rowAtPoint(event.clientX, event.clientY, boxRef.current, bandRef.current));
     };
     const onLeave = () => setHovered(-1);
 
@@ -315,6 +423,7 @@ export default function HeroCardRibbon({ items }) {
      * breakpoints. They were one until this was screenshotted at 768.
      */
     <div
+      ref={boxRef}
       aria-hidden="true"
       className="pointer-events-none absolute inset-y-0 right-0 z-0 w-full overflow-hidden opacity-25 md:w-[62%] lg:opacity-60 xl:opacity-100"
       style={DISSOLVE}
