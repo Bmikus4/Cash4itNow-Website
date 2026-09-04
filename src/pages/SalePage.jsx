@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { salesQuery, saleDateRange, saleLocation } from "@/api/salesClient";
 import { salePageMode } from "@/api/salesWire";
 import CountdownTimer from "@/components/sales/CountdownTimer";
+import SaleRoomGallery from "@/components/sales/SaleRoomGallery";
 import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
 import SalesUnavailableNotice from "@/components/sales/SalesUnavailableNotice";
 import { usePageMeta } from "@/lib/usePageMeta";
@@ -217,23 +218,22 @@ export default function SalePage() {
             <h2 className="font-heading font-black text-2xl uppercase tracking-tight">Sale Preview Photos</h2>
             <div className="h-1 bg-accent w-16 mb-8 mt-1" />
 
+            {/* THE EXPORT'S GALLERY, not a second grid written here.
+                `SaleRoomGallery` has been in this repository since the Base44 strip and was never
+                imported by anything, so the catalogue rendered as a plain strip of letterboxed
+                thumbnails while the component that knows how an estate's photographs should look —
+                square tiles, an accent hairline on hover, a lightbox you can walk with the arrow
+                buttons — sat unused two directories away.
+
+                One unnamed room: the platform's catalogue is itemised rather than grouped by room,
+                so there is no room to name and the gallery omits its chip. Each item's title
+                travels as the photo's own label and surfaces in the lightbox footer. */}
             {catalog.items.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {catalog.items.map((photo, i) => (
-                  <figure key={photo.id} className="border-2 border-foreground/10 overflow-hidden group">
-                    <img
-                      src={photo.imageUrl}
-                      alt={photo.title || `${sale.title} preview ${i + 1}`}
-                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    {photo.title && (
-                      <figcaption className="font-heading font-bold text-xs uppercase tracking-widest text-muted-foreground px-3 py-2">
-                        {photo.title}
-                      </figcaption>
-                    )}
-                  </figure>
-                ))}
-              </div>
+              <SaleRoomGallery
+                rooms={[
+                  { photos: catalog.items.map((item) => ({ url: item.imageUrl, title: item.title })) },
+                ]}
+              />
             )}
 
             {/* The feed told us this catalog holds items and did not send them.

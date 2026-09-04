@@ -1,9 +1,9 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Calendar, ArrowRight, MapPin, Images } from "lucide-react";
+import { Calendar, ArrowRight, Clock, MapPin, Images } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
-import { saleDateRange, saleLocation } from "@/api/salesClient";
+import { saleDateRange, saleLocation, saleStartTime } from "@/api/salesClient";
 import { readCatalog, CATALOG_ITEMS, CATALOG_PENDING } from "@/api/catalogChannel";
 import CountdownTimer from "@/components/sales/CountdownTimer";
 import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
@@ -61,6 +61,7 @@ function catalogLabel(catalog) {
 export default function SaleCard({ sale, index = 0, tone = "dark", showSignup = true }) {
   const t = TONES[tone] ?? TONES.dark;
   const dates = saleDateRange(sale, format);
+  const startTime = saleStartTime(sale, format);
   const where = saleLocation(sale);
   const catalog = catalogLabel(sale.catalog);
 
@@ -89,6 +90,25 @@ export default function SaleCard({ sale, index = 0, tone = "dark", showSignup = 
               <span className="font-heading text-accent text-sm uppercase tracking-wider font-bold">{dates}</span>
             </div>
           )}
+          {/* THE DOOR TIME, restored from the Base44 export's card, where it was its own line
+              under the date with a clock beside it. The export read a free-text `time` field; the
+              feed carries `startsAt` as a real instant, so the same line is derived from that
+              rather than from a second column somebody has to remember to fill in. */}
+          {startTime && (
+            <div className="flex items-center gap-2">
+              <Clock className={`w-4 h-4 flex-shrink-0 ${t.metaIcon}`} />
+              <span className={`font-heading text-sm uppercase tracking-wider font-bold ${t.meta}`}>
+                {startTime}
+              </span>
+            </div>
+          )}
+          {/* THE EXPORT LINKED THE FULL STREET ADDRESS TO GOOGLE MAPS HERE. THAT LINE IS NOT
+              CARRIED OVER, and it is the one thing on this card that is deliberately not verbatim.
+              The contract withholds a sale's address until 48 hours before the doors open; the
+              public feed does not send one, `SalePage` states the rule at length, and
+              `check-event-schema.mjs` fails if an address reaches the structured data. Restoring
+              the link would publish a stranger's house to anyone who loads the home page. City and
+              state, which is what `saleLocation` returns and all it returns. */}
           {where && (
             <div className="flex items-center gap-2">
               <MapPin className={`w-4 h-4 flex-shrink-0 ${t.metaIcon}`} />

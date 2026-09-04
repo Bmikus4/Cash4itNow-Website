@@ -120,15 +120,34 @@ async function browserExecutable() {
   return { executable: installed.executablePath, extraArgs: [] };
 }
 
-function serveDist() {
+/**
+ * THE SPA FALLBACK IS SERVED FROM MEMORY, and it is the third reader of the shell rather than a
+ * second copy of it.
+ *
+ * `main()` already reads `dist/index.html` once, before anything can overwrite it, with a comment
+ * naming the hazard: two things need the pristine shell and both would otherwise read it back
+ * after this script has replaced it with the home page. **This server was the third and was not
+ * counted.** It re-opened the file on every request, which is a read of something that must not
+ * change during the run — and on the exFAT volume this repository lives on it is also a read that
+ * intermittently answers `ENOENT` for a file that is sitting there. Two builds in a row died on
+ * `/about` with `ENOENT: dist\index.html` while `ls` showed it, 2,072 bytes, unchanged.
+ *
+ * Holding the bytes removes both: the fallback cannot drift from the shell `main()` measured, and
+ * it cannot fail on a filesystem answering a question it was never necessary to ask.
+ */
+function serveDist(shell) {
   const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".jpg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml", ".txt": "text/plain" };
   const server = http.createServer((req, res) => {
     const url = decodeURIComponent(req.url.split("?")[0]);
     const asFile = path.join(DIST, url);
     const isFile = url !== "/" && fs.existsSync(asFile) && fs.statSync(asFile).isFile();
-    const file = isFile ? asFile : path.join(DIST, "index.html");
-    res.writeHead(200, { "content-type": types[path.extname(file)] || "application/octet-stream" });
-    fs.createReadStream(file).pipe(res);
+    if (!isFile) {
+      res.writeHead(200, { "content-type": "text/html" });
+      res.end(shell);
+      return;
+    }
+    res.writeHead(200, { "content-type": types[path.extname(asFile)] || "application/octet-stream" });
+    fs.createReadStream(asFile).pipe(res);
   });
   return new Promise((resolve) => server.listen(PORT, () => resolve(server)));
 }
@@ -243,7 +262,7 @@ async function main() {
 
   let chrome;
   let session;
-  const server = await serveDist();
+  const server = await serveDist(shell);
   try {
     const { executable, extraArgs } = await browserExecutable();
     if (!fs.existsSync(executable)) throw new Error(`no browser at ${executable} (override with CHROME_PATH)`);

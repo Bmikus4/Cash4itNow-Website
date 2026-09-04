@@ -177,6 +177,25 @@ export function saleLocation(sale) {
 }
 
 /**
+ * "9:00 AM" — the hour the doors open, from `startsAt`.
+ *
+ * The Base44 export carried a free-text `time` on the sale and printed it on the card. The feed
+ * carries `startsAt` as a real instant instead, so the line is DERIVED rather than restored as a
+ * second column: one field that is always right beats two that can disagree about when a sale
+ * starts, on the card a customer plans a Saturday around.
+ *
+ * Returns "" for a missing or unparseable date, and for midnight — a sale whose start was recorded
+ * as a date with no time lands on 00:00, and printing "12:00 AM" would invent a door time nobody
+ * stated. That is the same rule the catalogue count keeps: an unknown is not a zero.
+ */
+export function saleStartTime(sale, format) {
+  const start = sale?.startsAt ? new Date(sale.startsAt) : null;
+  if (!start || Number.isNaN(start.getTime())) return "";
+  if (start.getHours() === 0 && start.getMinutes() === 0) return "";
+  return format(start, "h:mm a");
+}
+
+/**
  * "March 14" for a one-day sale, "March 14-16" when it runs longer. endsAt is
  * optional, and a missing or unparseable startsAt returns an empty string
  * rather than "Invalid Date".

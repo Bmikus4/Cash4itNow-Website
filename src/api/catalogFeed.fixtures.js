@@ -12,7 +12,14 @@
  * these.
  */
 
-const item = (id, title) => ({
+/**
+ * `image` varies per item, because in production it always does — every item's URL carries its own
+ * image id. A fixture that gave three items one image would be a fixture whose success proves only
+ * that the fixture works: the gallery deduped them into a single tile and the sale page showed one
+ * photograph for a three-item catalogue. That is the shape of hazard this repository has already
+ * paid for twice, most recently in `salesClient.js`'s mock.
+ */
+const item = (id, title, image) => ({
   id,
   title,
   description: "A fixture item.",
@@ -22,7 +29,7 @@ const item = (id, title) => ({
   askingPrice: "120.00",
   // RELATIVE ON PURPOSE. An absolute URL here would be a second place an origin is written down,
   // which `predeploy.mjs` correctly fails the build over.
-  imageUrl: "/hero-after.webp",
+  imageUrl: image,
 });
 
 /** The feed answering normally. */
@@ -37,7 +44,11 @@ export const healthyFeed = {
       publishedAt: new Date(0).toISOString(),
       itemCount: 3,
     },
-    items: [item("a", "Oak sideboard"), item("b", "Enamel sign"), item("c", "Record crate")],
+    items: [
+      item("a", "Oak sideboard", "/hero-after.webp"),
+      item("b", "Enamel sign", "/hero-before.webp"),
+      item("c", "Record crate", "/img/0bf12dc53_generated_image.webp"),
+    ],
   },
 };
 
