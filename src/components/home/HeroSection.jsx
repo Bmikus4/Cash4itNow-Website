@@ -59,12 +59,13 @@ const STANDING_ITEMS = [
  * want it. The hero keeps the two actions it has always converted on, the phone
  * number and a free evaluation, plus the anchor down to How It Works.
  *
- * WHEN A CATALOG IS PUBLISHED it appears as one button in the bottom-right corner
- * of the hero, on the spot Ben marked on a screenshot. It was a strip under the
- * buttons in the left column first; both existed together for about ten minutes
- * and the duplication was the whole argument against it. Either way the point
- * stands: the newest sale gets an announcement without a voice louder than the
- * business's own name.
+ * THE CATALOG BUTTON in the bottom-right corner is always present, on the spot
+ * Ben marked on a screenshot. It names the newest sale and links to it when the
+ * feed has given us one, and falls back to Upcoming Sales when it has not — so
+ * there is always somewhere to go, and never a claim that a catalog exists when
+ * none has been published. It was a strip under the buttons in the left column
+ * first; both existed together for about ten minutes and the duplication was the
+ * whole argument against it.
  */
 
 /** As in SaleCard: only ITEMS and a counted PENDING carry a number the feed stated. */
@@ -99,11 +100,11 @@ export default function HeroSection() {
   const { data, isLoading } = useQuery(salesQuery());
 
   /*
-   * The catalog button renders only when a feed that ANSWERED gave us a sale.
-   * Degraded and snapshot both fall through to nothing, because this is above the
-   * fold and two of those states are a static file — the same rule as
-   * /upcoming-sales, for the same reason. An absent button claims nothing; a
-   * present one is always true.
+   * `sale` is set only by a feed that ANSWERED. Degraded and snapshot both leave
+   * it null, because this is above the fold and two of those states are a static
+   * file — the same rule as /upcoming-sales, for the same reason. The button
+   * still renders in those states; it just falls back to the calendar page
+   * instead of naming a sale. Nothing specific is ever printed from a null.
    */
   const trustworthy = !isLoading && !isDegraded(data) && !isSnapshot();
   const sale = trustworthy ? newestCatalog(data?.upcoming) : null;
@@ -148,17 +149,12 @@ export default function HeroSection() {
         the trade he asked for, and it reads as intent because the hero is
         full-bleed and they are not.
       */}
-      {/* The bottom padding grows on a phone WHEN THERE IS A CATALOG BUTTON,
-          and only then. The button is absolutely positioned, so on a narrow
-          screen it lands on top of the "How We Get It Done" link instead of
-          beside anything — the copy has to be pushed up to make room, and
-          reserving that room unconditionally would leave a gap under the
-          hero on every day there is no sale, which is most of them. */}
-      <div
-        className={`relative z-10 min-h-[100dvh] flex items-center px-6 md:px-10 pt-24 ${
-          sale?.slug ? "pb-44 md:pb-20" : "pb-20"
-        }`}
-      >
+      {/* The extra bottom padding on a phone is room for the catalog button,
+          which is absolutely positioned and would otherwise land on top of the
+          "How We Get It Done" link rather than beside anything. It used to be
+          conditional, to avoid a gap under the hero on the days there was no
+          sale; the button is unconditional now, so this is too. */}
+      <div className="relative z-10 min-h-[100dvh] flex items-center px-6 md:px-10 pt-24 pb-44 md:pb-20">
         <div className="w-full">
           <div className="max-w-2xl">
             <motion.div
@@ -248,10 +244,17 @@ export default function HeroSection() {
         newestCatalog() already picks a single sale, and a row of them here would
         be a second /upcoming-sales competing with the headline.
 
-        It renders on exactly the same condition as the panel in the left column:
-        a feed that ANSWERED and gave us a sale with a slug. Degraded feeds and
-        snapshots fall through to nothing, because a button promising a catalog
-        that 404s is worse than no button, and a static file cannot know.
+        IT IS ALWAYS THERE, and it changes what it says rather than whether it
+        exists. With a catalog it names that sale and goes to it; without one it
+        says Upcoming Sales and goes to /upcoming-sales. That covers the two
+        states where it used to vanish — a feed that could not answer, and a
+        prerendered snapshot, which has no feed by design — and in both of those
+        the fallback is the honest destination anyway: the calendar page, which
+        can say for itself what is and is not scheduled.
+
+        WHAT IT MUST NEVER DO is name a catalog it has not been told about. Every
+        line that says something specific is gated on sale?.slug, so the fallback
+        promises only a page that always exists.
 
         IT REPLACED A PANEL IN THE LEFT COLUMN that said the same words. That
         panel had the dates, the location and the item count, so those moved in
@@ -262,30 +265,29 @@ export default function HeroSection() {
         It sits higher on a phone than on a desktop because the scroll cue is
         centred at the hero's foot and they would otherwise overlap.
       */}
-      {sale?.slug && (
-        <motion.div
-          initial={reduceMotion ? false : { opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-          className="absolute bottom-20 right-6 md:bottom-8 md:right-10 z-20 max-w-[calc(100%-3rem)] md:max-w-sm"
-        >
+      <motion.div
+        initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+        className="absolute bottom-20 right-6 md:bottom-8 md:right-10 z-20 max-w-[calc(100%-3rem)] md:max-w-sm"
+      >
           <Link
-            to={`/sale/${sale.slug}`}
+            to={sale?.slug ? `/sale/${sale.slug}` : "/upcoming-sales"}
             className="group flex items-center gap-4 border-2 border-white/25 bg-black/70 px-5 py-4 backdrop-blur-sm transition-colors hover:border-accent hover:bg-black/85"
           >
             <span className="min-w-0">
               <span className="block font-heading text-accent text-[0.65rem] uppercase tracking-[0.3em] mb-1">
-                Newest Catalog
+                {sale?.slug ? "Newest Catalog" : "Coming Up"}
               </span>
               <span className="block truncate font-heading font-black text-white text-base lg:text-lg uppercase tracking-tight">
-                {sale.title}
+                {sale?.slug ? sale.title : "Upcoming Sales"}
               </span>
               {/* Only what the feed actually stated. saleDateRange and
                   saleLocation return "" for a sale that carries neither, and
                   catalogCount returns null unless the catalog counted itself —
                   so an incomplete sale loses this line rather than printing an
                   empty one or a zero. */}
-              {(dates || where || count) && (
+              {sale?.slug && (dates || where || count) && (
                 <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-heading text-white/55 text-[0.65rem] uppercase tracking-wider font-bold">
                   {dates && (
                     <span className="inline-flex items-center gap-1.5">
@@ -305,8 +307,7 @@ export default function HeroSection() {
             </span>
             <ArrowRight className="w-5 h-5 shrink-0 text-white/70 transition-transform group-hover:translate-x-1 group-hover:text-accent" />
           </Link>
-        </motion.div>
-      )}
+      </motion.div>
 
       {/* data-loop-animation: this never settles, so framer-motion rewrites its
           inline transform every frame and a snapshot captures whichever value the
