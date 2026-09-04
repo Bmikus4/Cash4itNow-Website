@@ -134,3 +134,27 @@
     font-family: var(--font-body);
   }
 }
+/*
+ * A FORM CONTROL UNDER 16px MAKES iOS ZOOM THE WHOLE PAGE, AND A ZOOMED PAGE PANS SIDEWAYS.
+ *
+ * Safari on iOS auto-zooms when a control smaller than 16px takes focus, and it does not zoom back
+ * out on blur. From then on the layout viewport is wider than the screen and every page pans
+ * horizontally until somebody pinches out. Nothing here overflows -- every route measures
+ * `scrollWidth` exactly equal to the viewport from 320px up -- so the sideways movement is the
+ * visual viewport, not the layout.
+ *
+ * The controls that start it here are the offer form, the contact form and the footer sign-up, all
+ * `text-sm`. The admin tool carries the same rule for the same reason.
+ *
+ * `pointer: coarse` only, so the 14px this site is drawn at is untouched on a desktop, where a
+ * mouse never triggers the zoom. `max()` so a control deliberately set larger keeps its size. Not
+ * `maximum-scale=1` on the viewport meta: that would suppress the symptom by taking pinch-zoom
+ * away from the people who need it.
+ */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}
