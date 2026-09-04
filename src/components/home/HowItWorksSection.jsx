@@ -45,10 +45,13 @@ export default function HowItWorksSection() {
           ))}
         </div>
 
-        {/* Moved out of the hero on Ben's call. Somebody who has just read how the
-            process works is the first person on the page with a reason to look at
-            what is scheduled; in the hero it was competing with the phone number
-            before anyone knew what the business does. */}
+        {/* CONTACT, NOT THE CALENDAR. This said "See Upcoming Sales" until Ben
+            changed it, and the change is the better read of the spot: the four
+            panels above it describe what the business does FOR YOU — cleanouts,
+            cash, pickup — so the reader who has just finished them is a seller,
+            and a seller sent to a list of sales to attend has been handed the
+            wrong door. /upcoming-sales still has its own place in the nav and at
+            the foot of the page for the buyer. */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -56,10 +59,10 @@ export default function HowItWorksSection() {
           className="text-center mt-12 md:mt-16"
         >
           <Link
-            to="/upcoming-sales"
+            to="/contact"
             className="inline-flex items-center justify-center gap-2 border-2 border-accent text-accent px-8 py-4 font-heading font-bold text-lg uppercase tracking-wide hover:bg-accent hover:text-white transition-colors"
           >
-            See Upcoming Sales
+            Contact Us
             <ArrowRight className="w-5 h-5" />
           </Link>
         </motion.div>
