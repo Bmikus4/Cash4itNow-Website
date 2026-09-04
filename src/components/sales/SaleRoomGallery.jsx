@@ -90,9 +90,24 @@ export default function SaleRoomGallery({ rooms }) {
                 <button
                   key={photoIdx}
                   onClick={() => openLightbox(roomIdx, photoIdx)}
-                  className="aspect-square overflow-hidden border border-foreground/10 hover:border-accent transition-colors"
+                  className="group text-left border border-foreground/10 hover:border-accent transition-colors flex flex-col"
                 >
-                  <img src={photo.url} alt={photo.title || `${room.room_name || "Sale"} photo ${photoIdx + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                  {/* The SQUARE stays on the image alone. Putting the caption inside the
+                      aspect-square box would shrink every photograph by the height of its own
+                      title, and a lot with a two-line title would be smaller than its neighbour. */}
+                  <span className="aspect-square overflow-hidden block">
+                    <img src={photo.url} alt={photo.title || `${room.room_name || "Sale"} photo ${photoIdx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  </span>
+                  {/* CAPTIONED ONLY WHERE A TITLE EXISTS, which is the same distinction the chip
+                      above makes. A room photograph is a place and has no title; an itemised lot
+                      has one, and a photograph of a lot with no name under it makes a visitor ask
+                      what they are looking at. Never substitute a fallback like "Lot 12" — that
+                      labels a photograph with a fact nobody stated. */}
+                  {photo.title && (
+                    <span className="block px-2 py-2 text-xs leading-snug text-foreground/80 group-hover:text-foreground">
+                      {photo.title}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
