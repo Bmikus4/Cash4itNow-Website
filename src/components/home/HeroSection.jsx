@@ -8,7 +8,7 @@ import HeroLeadForm from "@/components/home/HeroLeadForm";
 import HeroCardRibbon from "@/components/home/HeroCardRibbon";
 import Wordmark from "@/components/brand/Wordmark";
 import KineticGrid from "@/components/ui/kinetic-grid";
-import { salesQuery, saleDateRange, saleLocation } from "@/api/salesClient";
+import { salesQuery, saleDateRange, saleLocation, saleStartTime } from "@/api/salesClient";
 import { isDegraded, isSnapshot } from "@/api/salesWire";
 import { readCatalog, CATALOG_ITEMS, CATALOG_PENDING } from "@/api/catalogChannel";
 
@@ -126,7 +126,7 @@ export default function HeroSection() {
    * photographs the feed never sent.
    */
   /*
-   * THE TOWN-AND-DATE CARDS THAT SIT IN THE RIBBON, one per row.
+   * THE SALE CARDS THAT SIT IN THE RIBBON, one per row.
    *
    * Derived here rather than in the ribbon because this is the only place that
    * knows whether the feed can be believed. `trustworthy` is false for a
@@ -135,12 +135,20 @@ export default function HeroSection() {
    * button follows, for the same reason: a card naming a town and a date is a
    * claim, and a static file cannot make it.
    *
-   * A sale with no town or no readable start date is dropped rather than shown
+   * A sale with no location or no readable start is dropped rather than shown
    * with a blank half. The card has no placeholder text by design.
    *
-   * "MMM d" and not the long form: the card is 180px wide, and "October 11,
-   * 2026" wraps to three lines in it. The year is not printed at all — every
-   * sale in `upcoming` is ahead of today, so it can only be this one or the next.
+   * THE SHAPE IS FLATTENED HERE rather than handed to the card whole, because
+   * the card is 241px wide on a desktop and every decision about what will fit
+   * in it — "MMM d" and not "October 11, 2026", the date and door time joined on
+   * one line, the time dropped entirely when the feed did not state one — is a
+   * decision about the SENTENCE, and belongs beside the helpers that build it.
+   * The card renders strings; it does not know what a Sale is.
+   *
+   * `address` is read straight off the entry and is almost always absent: the
+   * contract withholds a street until 48 hours before the doors, so what the
+   * copy button usually puts on the clipboard is the town and state. See
+   * HeroSaleCard, which states the rule and why it must not be worked around.
    */
   const saleCards = useMemo(() => {
     if (!trustworthy) return [];
@@ -148,12 +156,15 @@ export default function HeroSection() {
     return list
       .map((entry) => {
         const start = entry?.startsAt ? new Date(entry.startsAt) : null;
-        if (!entry?.city || !start || Number.isNaN(start.getTime())) return null;
+        const where = saleLocation(entry);
+        if (!where || !start || Number.isNaN(start.getTime())) return null;
+        const day = format(start, "MMM d");
+        const time = saleStartTime(entry, format);
         return {
-          id: entry.slug || `${entry.city}-${entry.startsAt}`,
-          city: entry.city,
-          state: entry.state || "",
-          date: format(start, "MMM d"),
+          id: entry.slug || `${where}-${entry.startsAt}`,
+          location: where,
+          when: time ? `${day} · ${time}` : day,
+          address: typeof entry.address === "string" ? entry.address.trim() : "",
         };
       })
       .filter(Boolean);
@@ -170,9 +181,6 @@ export default function HeroSection() {
 
   return (
     <KineticGrid globalColor="monochrome" className="min-h-[100dvh]">
-      {/* The hero's image asset, beside the type rather than behind it. */}
-      <HeroCardRibbon items={ribbonItems} sales={saleCards} />
-
       {/*
         NOT max-w-7xl mx-auto, unlike every section below it, and that is the
         change rather than an oversight. Ben: move the hero text farther left. The
@@ -189,9 +197,21 @@ export default function HeroSection() {
           "How We Get It Done" link rather than beside anything. It used to be
           conditional, to avoid a gap under the hero on the days there was no
           sale; the button is unconditional now, so this is too. */}
-      <div className="relative z-10 min-h-[100dvh] flex items-center px-6 md:px-10 pt-24 pb-44 md:pb-20">
+      {/*
+        pointer-events-none ON THE WRAPPER, auto on the copy inside it.
+
+        This block is full-width and full-height at z-10, so on a desktop it lies
+        across the whole ribbon — and a transparent element is still a hit
+        target. Everything in the band was therefore unclickable from the moment
+        the ribbon gained a control: the See More link and the copy button on the
+        sale cards were being hit-tested against this div instead. The two
+        affordances that are meant to sit over the ribbon (the catalog button and
+        the copy column itself) turn their own events back on; the empty space
+        between them does not, and lets the cards underneath answer.
+      */}
+      <div className="pointer-events-none relative z-10 min-h-[100dvh] flex items-center px-6 md:px-10 pt-24 pb-44 md:pb-20">
         <div className="w-full">
-          <div className="max-w-2xl">
+          <div className="pointer-events-auto max-w-2xl">
             <motion.div
               {...rise(0.1)}
               className="inline-flex items-center gap-2 bg-accent text-white px-4 py-2 mb-8"
@@ -271,7 +291,6 @@ export default function HeroSection() {
 
           </div>
         </div>
-      </div>
 
       {/*
         THE NEWEST CATALOG, AS ONE BUTTON IN THE BOTTOM-RIGHT OF THE HERO. Ben
@@ -299,12 +318,18 @@ export default function HeroSection() {
 
         It sits higher on a phone than on a desktop because the scroll cue is
         centred at the hero's foot and they would otherwise overlap.
+
+        IT IS ANCHORED TO THE COPY, not to the section. On a phone the section is
+        now a screen of copy FOLLOWED BY a band of cards, so a button positioned
+        against the section would land at the foot of the cards, a screen and a
+        half below the headline it belongs to. Against the copy block it stays
+        where Ben marked it on both layouts. Same for the scroll cue underneath.
       */}
       <motion.div
         initial={reduceMotion ? false : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
-        className="absolute bottom-20 right-6 md:bottom-8 md:right-10 z-20 max-w-[calc(100%-3rem)] md:max-w-sm"
+        className="pointer-events-auto absolute bottom-20 right-6 md:bottom-8 md:right-10 z-20 max-w-[calc(100%-3rem)] md:max-w-sm"
       >
           <Link
             to={sale?.slug ? `/sale/${sale.slug}` : "/upcoming-sales"}
@@ -358,6 +383,17 @@ export default function HeroSection() {
       >
         <ArrowDown className="w-6 h-6 text-white/40" />
       </motion.div>
+      </div>
+
+      {/*
+        THE HERO'S IMAGE ASSET, AND IT COMES AFTER THE COPY IN THE MARKUP NOW.
+        On a phone that is exactly where it renders: a band of its own below the
+        headline. From md up the ribbon is absolutely placed and z-0, so the
+        document order does not reach the layout at all and it is still the
+        right-hand asset beside the type. Ordering it this way round is what
+        makes the phone case need no second copy of the component.
+      */}
+      <HeroCardRibbon items={ribbonItems} sales={saleCards} />
     </KineticGrid>
   );
 }
