@@ -79,6 +79,9 @@ const BAND_DEG = -22;
 const BAND_RAD = (BAND_DEG * Math.PI) / 180;
 const BAND_COS = Math.cos(BAND_RAD);
 const BAND_TAN = Math.tan(BAND_RAD);
+/** The three rows' own height, projected onto the screen once rotated. */
+const BAND_PERP = (ROWS.length * CARD_H + (ROWS.length - 1) * GAP) * Math.cos((BAND_DEG * Math.PI) / 180);
+
 /** Screen-space unit vector along a row, used to project a drag onto it. */
 const ALONG_X = Math.cos(-BAND_RAD);
 const ALONG_Y = -Math.sin(-BAND_RAD);
@@ -194,6 +197,63 @@ const rowOffset = (index, pitch) => (index - (ROWS.length - 1) / 2) * pitch;
 const rowShift = (index, pitch) => BAND_TAN * rowOffset(index, pitch);
 
 /**
+ * WHERE A ROW LEAVES THE BOX, and why each row's mask has to stop there.
+ *
+ * WHAT WAS BROKEN. A row rotated 22 degrees CLIMBS as it crosses the box, and
+ * the band is taller than any hero it has been put in, so the top row exits
+ * through the top of the box near its right end and the bottom row through the
+ * bottom near its LEFT end. The box's vertical fade dissolves them as they go —
+ * which does not remove them, it leaves a half-lit SLIVER of card sticking out
+ * past the line the rest of the ribbon's edge makes. Ben drew that line down a
+ * screenshot, put a cross through the sliver in the bottom-left corner, and drew
+ * an arrow pointing right: "the BOTTOM ROW OF CARDS needs moved to the RIGHT".
+ *
+ * Measured at his viewport, 1853x860: the leftmost fully lit card was at x=734
+ * in the top row, 767 in the middle and 1061 in the bottom — and everything
+ * between the box edge and 1061 in that bottom row was sliver.
+ *
+ * WHAT HAPPENS NOW. Each row's mask stops where that row's centre line leaves
+ * the box's clear band, so a row is drawn only where it is at least half inside
+ * the hero. The bottom row's left end moves right by the width of the slivers it
+ * used to trail, the top row's right end does the same, and the ribbon's edge
+ * becomes the parallelogram it always was instead of a clean line with two
+ * corners of debris. The middle row runs through the centre and is not clipped
+ * at all, which is why it stays the longest of the three.
+ *
+ * It is in BAND-LOCAL units because that is what the row mask is drawn in. The
+ * derivation: a point at band-local rowX sits at screen y
+ *
+ *   y = boxH/2 + ly*cos - tan * (rowX - W/2) * cos
+ *
+ * so solving y = EDGE_PX and y = boxH - EDGE_PX for rowX gives the two ends.
+ * Returns 0 for a row that never leaves, which is the middle one and, on a tall
+ * enough window, all three.
+ */
+function rowVerticalClip(index, rowWidth, pitch, boxH) {
+  if (!boxH) return { left: 0, right: 0 };
+  /*
+   * IT ONLY FIRES WHEN THE THREE ROWS THEMSELVES FIT. This clip exists to trim
+   * the DIAGONAL's overshoot — the two corners where a climbing row leaves the
+   * box. On a box shorter than the stack of rows is tall, the outer rows are
+   * half-lit along their WHOLE length instead, their centre lines never enter
+   * the clear band at all, and the arithmetic below would therefore ask for the
+   * entire row to be masked away. It did: on a 390x574 phone band it deleted
+   * the top and bottom rows outright.
+   *
+   * So the gate is the stack, not the diagonal: 828px of card perpendicular to
+   * the rows is 768px of screen height, plus the two ramps. Above that there are
+   * corners to trim; below it there is nothing to trim and the halved rows are
+   * the design.
+   */
+  if (BAND_PERP + 2 * EDGE_PX > boxH) return { left: 0, right: 0 };
+  const ly = rowOffset(index, pitch) * BAND_COS;
+  const perPx = Math.abs(BAND_TAN) * BAND_COS;
+  const lo = (ly - boxH / 2 + EDGE_PX) / perPx + rowWidth / 2;
+  const hi = (ly + boxH / 2 - EDGE_PX) / perPx + rowWidth / 2;
+  return { left: Math.max(0, lo), right: Math.max(0, rowWidth - hi) };
+}
+
+/**
  * THE STAGGER, AND IT IS MEANT TO BE BARELY THERE. The top and bottom rows give
  * up this much at each visible end and the middle row gives up none, so the three
  * are the same length bar a hair. It was a whole card once and then 32px; Ben:
@@ -208,16 +268,30 @@ const STAGGER_PX = 24;
 const isOuterRow = (index) => index === 0 || index === ROWS.length - 1;
 
 /** Dead length at a row's left and right ends, in px, given its measured width. */
-function rowInsets(index, rowWidth, pitch) {
+function rowInsets(index, rowWidth, pitch, boxH) {
   const base = ROW_CLIPPED_FRACTION * rowWidth + (isOuterRow(index) ? STAGGER_PX : 0);
-  return { left: base + rowShift(index, pitch), right: base - rowShift(index, pitch) };
+  const clip = rowVerticalClip(index, rowWidth, pitch, boxH);
+  return {
+    left: Math.max(base + rowShift(index, pitch), clip.left),
+    right: Math.max(base - rowShift(index, pitch), clip.right),
+  };
 }
 
-/** Fades one row out along its own direction of travel. */
-function rowFade(index, pitch) {
+/**
+ * Fades one row out along its own direction of travel.
+ *
+ * The stops are written as `calc(21.62% + Npx)` rather than as plain pixels
+ * because the clipped fraction is a property of the geometry and the row's width
+ * is a percentage of the box — but the vertical clip above is in real pixels of
+ * a measured box, so it is subtracted from the percentage rather than folded
+ * into it. That is why this takes rowWidth at all.
+ */
+function rowFade(index, pitch, rowWidth, boxH) {
   const bite = isOuterRow(index) ? STAGGER_PX : 0;
-  const left = rowShift(index, pitch) + bite;
-  const right = -rowShift(index, pitch) + bite;
+  const clip = rowVerticalClip(index, rowWidth, pitch, boxH);
+  const flat = ROW_CLIPPED_FRACTION * rowWidth;
+  const left = Math.max(rowShift(index, pitch) + bite, clip.left - flat);
+  const right = Math.max(-rowShift(index, pitch) + bite, clip.right - flat);
   const px = (n) => `${n.toFixed(1)}px`;
   return (
     `linear-gradient(to right, ` +
@@ -264,6 +338,8 @@ function rowFade(index, pitch) {
  * does something and always the same thing at a given spot.
  */
 function rowAtPoint(clientX, clientY, box, band, m) {
+  // boxH is read from the element rather than passed: this is called from window
+  // listeners that have no props.
   if (!box || !band) return -1;
 
   // 1a. The box mask, which is vertical only — the horizontal ends belong to the
@@ -299,7 +375,7 @@ function rowAtPoint(clientX, clientY, box, band, m) {
 
   // 1b + 3. The row mask, along the rotated row, inset by the stagger.
   const rowX = localX + width / 2;
-  const dead = rowInsets(index, width, m.pitch);
+  const dead = rowInsets(index, width, m.pitch, b.height);
   if (rowX < dead.left + ROW_FADE_PX) return -1;
   if (rowX > width - dead.right - ROW_FADE_PX) return -1;
 
@@ -318,7 +394,7 @@ function rowAtPoint(clientX, clientY, box, band, m) {
  */
 const GATE_TAU = 190;
 
-function Ribbon({ items, speed, direction, index, paused, register, reduceMotion, sale, m, bandWidth }) {
+function Ribbon({ items, speed, direction, index, paused, register, reduceMotion, sale, m, bandWidth, boxH }) {
   const baseX = useMotionValue(0);
   const rowRef = useRef(null);
 
@@ -396,12 +472,26 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
    * invisible WITHOUT making them untouchable — the same property that forced
    * rowAtPoint to be arithmetic rather than hit-testing. A See More button
    * sitting in a row's fade would be an invisible click target, which is worse
-   * than a dead one. So the card's pointer events are switched on only while it
-   * is wholly inside that row's unfaded window, computed from the same insets
-   * the mask itself is drawn from.
+   * than a dead one. So a copy goes live only while enough of it is inside that
+   * row's unfaded window, computed from the same insets the mask is drawn from.
    *
-   * At most one of the two copies can qualify: they are a wrap period apart and
-   * the period is longer than the window.
+   * "ENOUGH" IS HALF THE CARD, NOT ALL OF IT, and that is a fix rather than a
+   * loosening. Requiring the whole card inside the window left the controls dead
+   * for most of the time they were on screen: the window is 781px of a 2040px
+   * lap at 1440, so a card 384px wide was wholly inside for 19% of each lap per
+   * row, and a 30s sample found no clickable sale card anywhere in the ribbon
+   * for stretches of TWELVE SECONDS. A control that is visible and dead is the
+   * defect the strict test was trying to avoid, arrived at from the other side.
+   * Half in the clear is the point at which a visitor can read what they are
+   * about to click, and it takes the same measurement to 92%.
+   *
+   * Copies that have left the box entirely need no rule at all: the box is
+   * overflow-hidden, which clips hit testing along with paint. The window is
+   * only ever about the MASK, which does not.
+   *
+   * Both copies are scored and the better one wins, rather than the first that
+   * qualifies: at a wrap seam one copy is leaving as the other arrives, and
+   * taking the first would hand the events to the half that is on its way out.
    */
   const [liveSale, setLiveSale] = useState(-1);
   const liveRef = useRef(-1);
@@ -465,14 +555,16 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
     if (!sale) return;
     const rowWidth = rowRef.current?.offsetWidth ?? 0;
     if (!rowWidth) return;
-    const dead = rowInsets(index, rowWidth, m.pitch);
+    const dead = rowInsets(index, rowWidth, m.pitch, boxH);
     const from = dead.left + ROW_FADE_PX;
     const to = rowWidth - dead.right - ROW_FADE_PX;
     const shift = wrap(-half, 0, baseX.get());
     let live = -1;
+    let best = saleW / 2;
     for (const j of [saleSlot, saleSlot + strip.length]) {
       const left = offsets[j] + shift;
-      if (left >= from && left + saleW <= to) { live = j; break; }
+      const seen = Math.min(left + saleW, to) - Math.max(left, from);
+      if (seen >= best) { best = seen; live = j; }
     }
     // Only on a change: this runs every frame and setState every frame would
     // re-render the row sixty times a second to say the same thing.
@@ -506,7 +598,7 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
     baseX.set(baseX.get() + moveBy);
   }
 
-  const fade = rowFade(index, m.pitch);
+  const fade = rowFade(index, m.pitch, bandWidth, boxH);
 
   return (
     <div ref={rowRef} className="overflow-hidden" style={{ maskImage: fade, WebkitMaskImage: fade }}>
@@ -578,10 +670,10 @@ export default function HeroCardRibbon({ items, sales = [] }) {
    */
   const [frozen, setFrozen] = useState(false);
 
-  const [boxW, setBoxW] = useState(0);
+  const [box, setBox] = useState({ w: 0, h: 0 });
   const m = M;
   // The band is BAND_WIDTH_RATIO of the box, which is what a row has to fill.
-  const bandWidth = boxW * BAND_WIDTH_RATIO;
+  const bandWidth = box.w * BAND_WIDTH_RATIO;
   const mRef = useRef(m);
   mRef.current = m;
 
@@ -590,9 +682,10 @@ export default function HeroCardRibbon({ items, sales = [] }) {
   }, []);
 
   /*
-   * MEASURE THE BOX'S WIDTH, which is the only thing downstream needs: a row has
-   * to be filled with enough cards to cover the band, and the band is a
-   * percentage of the box. The cards themselves are a fixed size — see M.
+   * MEASURE THE BOX. Its WIDTH says how many cards a row needs to cover the
+   * band, which is a percentage of the box; its HEIGHT says where each row
+   * leaves the hero, which is where that row's mask has to stop. The cards
+   * themselves are a fixed size — see M.
    *
    * useLayoutEffect and a ResizeObserver rather than a window resize listener,
    * because the box is a percentage of the hero and changes size when the hero
@@ -600,13 +693,18 @@ export default function HeroCardRibbon({ items, sales = [] }) {
    * fires no resize on some browsers.
    */
   useLayoutEffect(() => {
-    const box = boxRef.current;
-    if (!box) return undefined;
-    const measure = () => setBoxW(box.clientWidth);
+    const el = boxRef.current;
+    if (!el) return undefined;
+    const measure = () =>
+      setBox((was) =>
+        was.w === el.clientWidth && was.h === el.clientHeight
+          ? was
+          : { w: el.clientWidth, h: el.clientHeight }
+      );
     measure();
     if (typeof ResizeObserver === "undefined") return undefined;
     const ro = new ResizeObserver(measure);
-    ro.observe(box);
+    ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
@@ -777,35 +875,43 @@ export default function HeroCardRibbon({ items, sales = [] }) {
      * its own in the flow, under the copy, at full strength — Ben: "on mobile
      * phones the scrolling hero should be in an extended graphic section and
      * appear below the hero text". Behind the copy at 25% it was neither
-     * readable as an image nor invisible enough to ignore. From md up it goes
-     * back to being the hero's right-hand asset, absolutely placed beside the
-     * type.
+     * readable as an image nor invisible enough to ignore. That layout now runs
+     * up to lg, because that is the first width at which "beside" is literally
+     * true; from there the ribbon is the hero's right-hand asset, absolutely
+     * placed.
      *
-     * pointer-events follow the same split. On a phone the band has nothing
-     * underneath it, so it takes its own touches and can therefore declare
-     * touch-action: pan-y — which is what lets a horizontal drag move the cards
-     * while a vertical one still scrolls the page. On a desktop it is over the
-     * hero copy and the CTA, so it must not take events at all; the window
-     * listeners above handle it there.
+     * pointer-events follow the same split. In the stacked layout the band has
+     * nothing underneath it, so it takes its own touches and can therefore
+     * declare touch-action: pan-y — which is what lets a horizontal drag move
+     * the cards while a vertical one still scrolls the page. Beside the copy it
+     * is over the headline and the CTA, so it must not take events at all; the
+     * window listeners above handle it there.
      *
-     * opacity is the half of the legibility problem a mask cannot solve. Where
-     * the ribbon is BEHIND the copy rather than beside it, the only ways to keep
-     * white type readable over a brightly lit photograph of silverware are to
-     * cover the photograph or to have less of it. Covering it is what hid the
-     * grid, so the cards are ghosted instead and the grid reads through them.
+     * THE CARDS ARE AT FULL STRENGTH AT EVERY WIDTH, and there is no opacity
+     * ramp any more. There used to be one — 25% at md, 60% at lg, full at xl —
+     * because the ribbon sat BEHIND the copy at those widths and white type over
+     * a brightly lit photograph of silverware is unreadable. It worked, and Ben's
+     * verdict on it was the thing that killed it: "when the window is shrunk
+     * almost all of the cards are transparent/semi-transparent". Ghosting the
+     * asset to protect the type is solving the wrong half.
      *
-     * IT RAMPS OVER THREE BREAKPOINTS, and every step was screenshotted rather
-     * than chosen. The reason it cannot be one step is that the ribbon's width
-     * is a PERCENTAGE while the copy's is FIXED (max-w-xl), so the two overlap
-     * by an amount that shrinks as the viewport grows and is never zero below
-     * 1280: 62% of 768 leaves the paragraph and the second CTA sitting on fully
-     * lit cards, and at 1024 the line ends still cross them. Only at xl does
-     * beside become literally true, and only there do the cards come up to full.
+     * The overlap is what got fixed instead. The ribbon's width is a PERCENTAGE
+     * and the copy's is FIXED — the headline stops growing at lg and ends at
+     * 597px from there on — so the two overlap by an amount that shrinks as the
+     * viewport grows. 62% of 768 puts the paragraph and the second CTA on lit
+     * cards, which no width can save; below lg the ribbon is therefore the
+     * phone's layout, its own band under the copy with nothing behind anything.
+     * From lg it goes beside the copy, and the width is picked so its left edge
+     * lands past the headline rather than on it: 42% starts it at 594px in a
+     * 1024 window, 56% at 563px in a 1280 one. Those are the two widths that
+     * clear 597px once the box's own 44px edge fade is counted. Both were
+     * screenshotted, not chosen — and a single percentage cannot do it, which is
+     * why there are two.
      */
     <div
       ref={boxRef}
       data-hero-ribbon=""
-      className="relative z-0 h-[68vh] min-h-[24rem] w-full touch-pan-y overflow-hidden opacity-100 md:pointer-events-none md:absolute md:inset-y-0 md:right-0 md:h-auto md:min-h-0 md:w-[62%] md:touch-auto md:opacity-25 lg:opacity-60 xl:opacity-100"
+      className="relative z-0 h-[68vh] min-h-[24rem] w-full touch-pan-y overflow-hidden lg:pointer-events-none lg:absolute lg:inset-y-0 lg:right-0 lg:h-auto lg:min-h-0 lg:w-[42%] lg:touch-auto xl:w-[56%]"
       style={DISSOLVE}
     >
       <div
@@ -832,6 +938,7 @@ export default function HeroCardRibbon({ items, sales = [] }) {
               reduceMotion={reduceMotion}
               m={m}
               bandWidth={bandWidth}
+              boxH={box.h}
               /* One sale per row, cycling, so three rows and two sales show the
                  first sale twice rather than leaving a row without one. Empty
                  list means no sale cards at all, which is the state the site is
