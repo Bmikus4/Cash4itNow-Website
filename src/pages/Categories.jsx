@@ -35,8 +35,16 @@ export default function Categories() {
         crawler, a screen reader or an assistant, and the markup underneath had
         to say all of it anyway.
 
-        THE FILE STAYS IN public/. ServicesSection.jsx still renders it on the
-        home page, so deleting the asset to tidy up would break that.
+        THE FILE STAYS IN public/, BUT NOT FOR THE REASON FIRST WRITTEN HERE.
+        This said ServicesSection.jsx still renders it on the home page. It does
+        reference it — and nothing imports ServicesSection.jsx. Home.jsx renders
+        PropertyServicesSection.jsx, a different file. Checked by fetching the
+        production home page: 14dc69cc4 does not appear in it.
+
+        So the flyer is referenced only from dead code and the asset is reachable
+        by nothing. Both are left in place rather than deleted, because that is a
+        separate call from the one Ben made here and neither costs anything at
+        runtime — but whoever prunes next should know they can go together.
 
         py-14 md:py-20 is the site's standard section padding
         (docs/UI-PRINCIPLES.md §4) and replaces the py-10 that was here. The
