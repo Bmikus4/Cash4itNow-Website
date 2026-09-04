@@ -22,6 +22,23 @@ function couponMessage(sale) {
   return `Coupon signup for "${sale.title}" (${identity})`;
 }
 
+/*
+ * THE PANEL IS AN OPAQUE DARK RED, and it had to stop being a tint.
+ *
+ * Ben, on /upcoming-sales: "the 10% off discount card is not dark red enough."
+ * It was `bg-accent/10`, and a tint has no colour of its own — it takes its
+ * darkness from whatever it is over. This component's type is written for the
+ * dark band (text-background is WHITE here), but /upcoming-sales puts its cards
+ * on the LIGHT one, so the panel composited to pale pink with white text on it:
+ * not merely off-brand, unreadable. On the sale page's black band the same class
+ * came out #2A1919, a grey-brown that read as a shadow. One class, two wrong
+ * answers, and both of them looked like a colour choice.
+ *
+ * --accent-deep is a surface: the accent's hue and saturation at a lightness
+ * that carries white type on its own. The panel now looks the same wherever it
+ * is put, which is the only property that makes the rest of this component's
+ * colours true.
+ */
 export default function SaleCouponSignup({ sale }) {
   const [phone, setPhone] = useState("");
   const [sending, setSending] = useState(false);
@@ -53,7 +70,7 @@ export default function SaleCouponSignup({ sale }) {
 
   if (done) {
     return (
-      <div className="mt-4 border-2 border-accent/40 bg-accent/10 p-3 flex items-center gap-2">
+      <div className="mt-4 border-2 border-accent bg-accent-deep p-3 flex items-center gap-2">
         <Check className="w-4 h-4 text-accent flex-shrink-0" />
         <p className="text-background/80 text-xs leading-snug">
           You're in! We'll text your <strong>10% off</strong> coupon for the second day of the sale.
@@ -63,7 +80,7 @@ export default function SaleCouponSignup({ sale }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4 border-2 border-accent/40 bg-accent/10 p-3">
+    <form onSubmit={handleSubmit} className="mt-4 border-2 border-accent bg-accent-deep p-3">
       {honeypotField}
       <div className="flex items-center gap-2 mb-2">
         <MessageSquare className="w-4 h-4 text-accent flex-shrink-0" />
@@ -71,7 +88,7 @@ export default function SaleCouponSignup({ sale }) {
           Get 10% Off — Day 2
         </p>
       </div>
-      <p className="text-background/60 text-xs mb-2.5 leading-snug">
+      <p className="text-background/75 text-xs mb-2.5 leading-snug">
         Enter your number and we'll text you a coupon for the second day of the sale.
       </p>
       <div className="flex gap-2">
