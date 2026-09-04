@@ -1,11 +1,13 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { Phone, CalendarClock } from "lucide-react";
 import { salesQuery, saleGridClass } from "@/api/salesClient";
 import { isDegraded, isSnapshot } from "@/api/salesWire";
 import { CONTACT_PHONE, CONTACT_PHONE_HREF } from "@/api/leadForm";
 import SaleCard from "@/components/sales/SaleCard";
+import EmptyPanel from "@/components/ui/EmptyPanel";
 import SalesUnavailableNotice from "@/components/sales/SalesUnavailableNotice";
 import { usePageMeta } from "@/lib/usePageMeta";
 import { useJsonLd, breadcrumbGraph, saleEventsGraph } from "@/lib/structuredData";
@@ -141,25 +143,31 @@ export default function UpcomingSales() {
           {!isLoading && mode === "empty" && (
             /* Nothing scheduled is a real, sayable fact, and it is NOT the same
                statement as the notice above. It must never borrow that wording. */
-            <div className="border-2 border-foreground/15 p-8 md:p-12 max-w-2xl mx-auto text-center">
-              <div className="w-16 h-16 bg-accent flex items-center justify-center mx-auto mb-6">
-                <CalendarClock className="w-8 h-8 text-white" />
-              </div>
-              <p className="font-heading font-black text-foreground text-2xl md:text-3xl uppercase tracking-tight mb-3">
-                Nothing on the calendar yet
-              </p>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-6">
-                The next sale is not scheduled. Call and we will tell you what is coming, or leave your email in the
-                footer and we will let you know the day it is posted.
-              </p>
-              <a
-                href={CONTACT_PHONE_HREF}
-                className="inline-flex items-center gap-2 font-heading font-black text-xs uppercase tracking-widest text-accent hover:underline"
-              >
-                <Phone className="w-3.5 h-3.5" />
-                {CONTACT_PHONE}
-              </a>
-            </div>
+            <EmptyPanel
+              icon={CalendarClock}
+              eyebrow="Between Sales"
+              title="Nothing on the calendar yet"
+              actions={
+                <>
+                  <a
+                    href={CONTACT_PHONE_HREF}
+                    className="inline-flex items-center justify-center gap-2 bg-accent text-white px-6 py-4 font-heading font-black text-lg uppercase tracking-wider hover:bg-accent/90 transition-colors"
+                  >
+                    <Phone className="w-5 h-5" />
+                    {CONTACT_PHONE}
+                  </a>
+                  <Link
+                    to="/contact"
+                    className="inline-flex items-center justify-center gap-2 border-2 border-foreground px-6 py-4 font-heading font-bold text-lg uppercase tracking-wide hover:bg-foreground hover:text-background transition-colors"
+                  >
+                    Tell Us What You Want
+                  </Link>
+                </>
+              }
+            >
+              The next sale is not scheduled. Call and we will tell you what is coming, or leave your email in the
+              footer and we will let you know the day it is posted.
+            </EmptyPanel>
           )}
 
           {!isLoading && mode === "list" && (

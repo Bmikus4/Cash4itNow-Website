@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ShoppingCart, Calendar, Search, X, Phone } from "lucide-react";
+import { ShoppingCart, Calendar, Search, X, Phone, PackageOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 import { fetchInventory, INVENTORY_QUERY_KEY } from "@/api/inventoryClient";
 import ShopItemCard from "@/components/shop/ShopItemCard";
+import EmptyPanel from "@/components/ui/EmptyPanel";
 import CartDrawer from "@/components/shop/CartDrawer";
 import { useCart } from "@/lib/CartContext";
 import { COMMERCE_ENABLED } from "@/lib/flags";
@@ -171,31 +172,31 @@ export default function Shop() {
                 <p className="text-muted-foreground mt-2">Try a different search or filter.</p>
               </div>
             ) : (
-              <div className="border-2 border-foreground max-w-3xl mx-auto my-8 p-8 md:p-12 text-center">
-                <p className="font-heading text-accent text-sm uppercase tracking-[0.3em] mb-3">Between Sales</p>
-                <h2 className="font-heading font-black text-foreground text-3xl md:text-4xl uppercase tracking-tight leading-[0.95] mb-4">
-                  Nothing listed right now
-                </h2>
-                <p className="text-muted-foreground max-w-lg mx-auto mb-8">
-                  Inventory goes up as estates come in, and the best pieces move at the sales themselves. Tell us
-                  what you collect and we'll call you when it turns up.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <a
-                    href="tel:4129697757"
-                    className="inline-flex items-center justify-center gap-2 bg-accent text-white px-6 py-4 font-heading font-black text-lg uppercase tracking-wider hover:bg-accent/90 transition-colors"
-                  >
-                    <Phone className="w-5 h-5" />
-                    412-969-7757
-                  </a>
-                  <Link
-                    to="/contact"
-                    className="inline-flex items-center justify-center gap-2 border-2 border-foreground px-6 py-4 font-heading font-bold text-lg uppercase tracking-wide hover:bg-foreground hover:text-background transition-colors"
-                  >
-                    Tell Us What You Want
-                  </Link>
-                </div>
-              </div>
+              <EmptyPanel
+                icon={PackageOpen}
+                eyebrow="Between Sales"
+                title="Nothing listed right now"
+                actions={
+                  <>
+                    <a
+                      href="tel:4129697757"
+                      className="inline-flex items-center justify-center gap-2 bg-accent text-white px-6 py-4 font-heading font-black text-lg uppercase tracking-wider hover:bg-accent/90 transition-colors"
+                    >
+                      <Phone className="w-5 h-5" />
+                      412-969-7757
+                    </a>
+                    <Link
+                      to="/contact"
+                      className="inline-flex items-center justify-center gap-2 border-2 border-foreground px-6 py-4 font-heading font-bold text-lg uppercase tracking-wide hover:bg-foreground hover:text-background transition-colors"
+                    >
+                      Tell Us What You Want
+                    </Link>
+                  </>
+                }
+              >
+                Inventory goes up as estates come in, and the best pieces move at the sales themselves. Tell us
+                what you collect and we'll call you when it turns up.
+              </EmptyPanel>
             )
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
