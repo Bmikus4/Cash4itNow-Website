@@ -5,8 +5,6 @@ import { usePageMeta } from "@/lib/usePageMeta";
 import { useJsonLd, offerCatalogGraph, breadcrumbGraph } from "@/lib/structuredData";
 import { CATEGORIES, ADDITIONAL_ITEMS } from "@/content/categories";
 
-const ORIGINAL_FLYER = "/img/14dc69cc4_Screenshot_20260524_215817_Facebook.webp";
-
 const categories = CATEGORIES;
 const additionalItems = ADDITIONAL_ITEMS;
 
@@ -27,16 +25,26 @@ export default function Categories() {
 
   return (
     <div className="pt-16 bg-background">
-      {/* Header with original flyer */}
+      {/*
+        NO FLYER BANNER. This page opened with a 40-to-52px-tall crop of
+        /img/14dc69cc4_…Facebook.webp at 40% opacity under a 60% scrim — the
+        original What We Buy flyer, a phone screenshot of a Facebook post.
+        Removed on Ben's word. The same defect it carried on the home page it
+        carried here: every category name in it is PIXELS, so the one image at
+        the top of the page about what the business buys said nothing to a
+        crawler, a screen reader or an assistant, and the markup underneath had
+        to say all of it anyway.
+
+        THE FILE STAYS IN public/. ServicesSection.jsx still renders it on the
+        home page, so deleting the asset to tidy up would break that.
+
+        py-14 md:py-20 is the site's standard section padding
+        (docs/UI-PRINCIPLES.md §4) and replaces the py-10 that was here. The
+        banner used to supply the top mass; without it, py-10 alone left this
+        header visibly shallower than every other page's.
+      */}
       <section className="bg-foreground">
-        <div className="relative h-40 md:h-52 overflow-hidden">
-          {/* Centred, not object-top: the flyer is a phone screenshot, and the
-              top of it is the phone's own status bar — clock, wifi, battery —
-              which reads as site chrome at this crop height. */}
-          <img src={ORIGINAL_FLYER} alt="Items we buy" className="w-full h-full object-cover object-center opacity-40" />
-          <div className="absolute inset-0 bg-foreground/60" />
-        </div>
-        <div className="max-w-7xl mx-auto px-6 md:px-10 py-10">
+        <div className="max-w-7xl mx-auto px-6 md:px-10 py-14 md:py-20">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <p className="font-heading text-accent text-sm uppercase tracking-[0.3em] mb-3">Cash 4 It Now</p>
             <h1 className="font-heading font-black text-background text-5xl md:text-7xl uppercase tracking-tight leading-[0.9] mb-4">
