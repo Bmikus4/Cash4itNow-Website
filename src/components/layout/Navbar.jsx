@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Phone, Heart } from "lucide-react";
 import { useFavorites } from "@/lib/FavoritesContext";
 import { motion, AnimatePresence } from "framer-motion";
+import Wordmark from "@/components/brand/Wordmark";
 
 /**
  * Six items now, and the count is the constraint rather than the content: the
@@ -42,7 +43,7 @@ export default function Navbar() {
         <div className="bg-accent h-1 w-full" />
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16 md:h-18">
           <Link to="/" className="font-heading text-2xl md:text-3xl font-bold tracking-tight text-background uppercase leading-none">
-            Cash 4 It Now
+            <Wordmark />
           </Link>
 
           <div className="hidden md:flex items-center gap-8">

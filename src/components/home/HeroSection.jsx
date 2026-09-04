@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { Link } from "react-router-dom";
 import HeroLeadForm from "@/components/home/HeroLeadForm";
 import HeroCardRibbon from "@/components/home/HeroCardRibbon";
+import Wordmark from "@/components/brand/Wordmark";
 import KineticGrid from "@/components/ui/kinetic-grid";
 import { salesQuery, saleDateRange, saleLocation } from "@/api/salesClient";
 import { isDegraded, isSnapshot } from "@/api/salesWire";
@@ -168,7 +169,7 @@ export default function HeroSection() {
               {...rise(0.2)}
               className="font-heading font-black text-white text-5xl md:text-7xl lg:text-8xl uppercase leading-[0.9] tracking-tight mb-4"
             >
-              Cash 4 It Now
+              <Wordmark />
             </motion.h1>
 
             <motion.h2

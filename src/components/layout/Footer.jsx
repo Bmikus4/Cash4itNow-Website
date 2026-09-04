@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Phone, Mail, MapPin } from "lucide-react";
 import { useLeadForm, CONTACT_PHONE, CONTACT_PHONE_HREF } from "@/api/leadForm";
+import Wordmark from "@/components/brand/Wordmark";
 
 export default function Footer() {
   const [email, setEmail] = useState("");
@@ -28,11 +29,14 @@ export default function Footer() {
     <footer className="bg-foreground text-background">
       {/* Big brand name */}
       <div className="border-b border-background/10 overflow-hidden py-10 md:py-14">
+        {/* The 4 is recoloured on the STROKE, not the fill: this wordmark is
+            transparent text and the fill is exactly what has been switched off,
+            so text-accent alone would change nothing visible here. */}
         <h2
-          className="font-heading font-black text-[13vw] leading-none tracking-tight text-transparent whitespace-nowrap select-none px-4"
+          className="font-heading font-black text-[13vw] leading-none tracking-tight text-transparent whitespace-nowrap select-none px-4 uppercase"
           style={{ WebkitTextStroke: "2px white" }}
         >
-          CASH 4 IT NOW
+          <Wordmark accentStyle={{ WebkitTextStroke: "2px hsl(var(--accent))" }} />
         </h2>
       </div>
 
