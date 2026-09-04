@@ -126,34 +126,34 @@ export default function HeroSection() {
    * photographs the feed never sent.
    */
   /*
-   * THE SALE CARDS THAT SIT IN THE RIBBON, one per row.
+   * THE SALE CARDS THAT SIT IN THE RIBBON, one per row, ALWAYS.
    *
    * Derived here rather than in the ribbon because this is the only place that
-   * knows whether the feed can be believed. `trustworthy` is false for a
-   * degraded feed and for every prerendered snapshot, and in both cases this is
-   * an empty list and the ribbon is photographs only — the same rule the catalog
-   * button follows, for the same reason: a card naming a town and a date is a
-   * claim, and a static file cannot make it.
+   * knows whether the feed can be believed, and the card's three states turn on
+   * exactly that: a real sale, "no upcoming events" when the feed ANSWERED and
+   * there is nothing, and a claimless "upcoming events" when we could not ask —
+   * a degraded feed, or any prerendered snapshot, which is built with no feed by
+   * design. Collapsing the last two would bake "nothing scheduled" into a static
+   * file on a day the calendar is full. See HeroSaleCard, which states the rule.
    *
    * A sale with no location or no readable start is dropped rather than shown
-   * with a blank half. The card has no placeholder text by design.
+   * with a blank half; if that leaves nothing, the empty card takes over.
    *
    * THE SHAPE IS FLATTENED HERE rather than handed to the card whole, because
-   * the card is 241px wide on a desktop and every decision about what will fit
-   * in it — "MMM d" and not "October 11, 2026", the date and door time joined on
-   * one line, the time dropped entirely when the feed did not state one — is a
-   * decision about the SENTENCE, and belongs beside the helpers that build it.
-   * The card renders strings; it does not know what a Sale is.
+   * every decision about what will fit in a 384px card — "MMM d" and not
+   * "October 11, 2026", the date and door time joined on one line, the time
+   * dropped entirely when the feed did not state one — is a decision about the
+   * SENTENCE, and belongs beside the helpers that build it. The card renders
+   * strings; it does not know what a Sale is.
    *
    * `address` is read straight off the entry and is almost always absent: the
-   * contract withholds a street until 48 hours before the doors, so what the
-   * copy button usually puts on the clipboard is the town and state. See
-   * HeroSaleCard, which states the rule and why it must not be worked around.
+   * contract withholds a street until 48 hours before the doors. It only ever
+   * reaches the clipboard, never the card's face.
    */
   const saleCards = useMemo(() => {
-    if (!trustworthy) return [];
+    if (!trustworthy) return [{ id: "pending", kind: "pending" }];
     const list = Array.isArray(data?.upcoming) ? data.upcoming : [];
-    return list
+    const cards = list
       .map((entry) => {
         const start = entry?.startsAt ? new Date(entry.startsAt) : null;
         const where = saleLocation(entry);
@@ -162,12 +162,14 @@ export default function HeroSection() {
         const time = saleStartTime(entry, format);
         return {
           id: entry.slug || `${where}-${entry.startsAt}`,
+          kind: "sale",
           location: where,
           when: time ? `${day} · ${time}` : day,
           address: typeof entry.address === "string" ? entry.address.trim() : "",
         };
       })
       .filter(Boolean);
+    return cards.length ? cards : [{ id: "none", kind: "none" }];
   }, [trustworthy, data]);
 
   const published = sale ? readCatalog(sale.catalog) : null;

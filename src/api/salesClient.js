@@ -21,13 +21,19 @@ const ENDPOINT = import.meta.env.VITE_SALES_ENDPOINT || resolveOrigins(import.me
 
 /**
  * `1` serves the healthy mock; `degraded` serves the platform's real degraded
- * response.
+ * response; `empty` serves a feed that ANSWERED and had nothing on.
  *
  * A MOCK THAT NEVER DEGRADES CANNOT SHOW YOU THE DEGRADED PATH. This is F3d's
  * second hazard with a new face: the mock used to send an array for every sale,
  * which is why the catalog defect stayed invisible in development for weeks —
  * the one shape production always sends was the shape the mock never did. Do not
  * "tidy" this back to a single healthy fixture.
+ *
+ * `empty` is there for the same reason and is not the same as `degraded`. An
+ * answered-and-empty feed is what production sends today, and several surfaces
+ * say something different for it than they do for a feed that could not answer:
+ * /upcoming-sales, the home band, and the hero's own sale card, which reads "No
+ * Upcoming Events" for this and must never read that for a degraded one.
  */
 const MOCK_MODE = import.meta.env.VITE_SALES_MOCK;
 
@@ -110,6 +116,7 @@ const MOCK = {
  */
 export async function fetchSales() {
   if (MOCK_MODE === "degraded") return readSalesResponse(DEGRADED_MOCK.status, DEGRADED_MOCK.body);
+  if (MOCK_MODE === "empty") return readSalesResponse(200, { upcoming: [], past: [] });
   if (MOCK_MODE === "1") return readSalesResponse(200, MOCK);
 
   let response;

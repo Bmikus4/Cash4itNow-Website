@@ -47,13 +47,17 @@ import HeroSaleCard from "@/components/home/HeroSaleCard";
  * card's proportion that changes, and object-cover re-crops each photograph to
  * suit.
  *
- * These are the size the cards want to be. What they actually get is this times
- * the fit factor below, because a hero is never as tall as three of them plus the
- * diagonal's rise.
+ * THEY ARE A FIXED SIZE, and one round of making them anything else is the
+ * reason to say so. The band is taller than the hero it sits in, so the outer
+ * rows are cut by the box's top and bottom; sizing the cards to make all three
+ * fit does work, and it made them 113px wide, which Ben's verdict on was "you
+ * shrunk cards and made them tiny". The rows are squared up by shifting the
+ * bottom one instead — see rowShift. Do not reintroduce a fit factor here.
  */
-const BASE_CARD_W = 180;
-const BASE_CARD_H = 260;
-const BASE_GAP = 24;
+const CARD_W = 180;
+const CARD_H = 260;
+const GAP = 24;
+const M = { cardW: CARD_W, cardH: CARD_H, gap: GAP, span: CARD_W + GAP, pitch: CARD_H + GAP };
 
 /**
  * Pixels per second, and 40% slower than what it replaced, which is the number
@@ -99,11 +103,8 @@ const ALONG_Y = -Math.sin(-BAND_RAD);
  * ONLY THE VERTICAL AXIS IS MASKED HERE. The horizontal ends belong to the rows,
  * because each row needs its own — see rowFade. Masking both here as well would
  * ramp the outer rows twice at the same edge.
- *
- * IT IS ALSO THE MARGIN THE FIT LEAVES ITSELF, below: the band is sized so that
- * no row reaches this ramp, which is the whole reason the three rows now line up.
  */
-const EDGE_PX = 28;
+const EDGE_PX = 44;
 
 const FADE_Y = `linear-gradient(to bottom, transparent 0px, #000 ${EDGE_PX}px, #000 calc(100% - ${EDGE_PX}px), transparent 100%)`;
 const DISSOLVE = {
@@ -116,53 +117,44 @@ const DISSOLVE = {
 };
 
 /**
- * THE FIT, AND IT IS WHY THE THREE ROWS AGREE.
+ * HOW THE PHOTOGRAPHS ARE DEALT INTO THE ROWS, so that as few as possible are on
+ * screen twice at once. Ben: "no image visible twice at one time, or at least
+ * mathematically optimize the slotting for this".
  *
- * WHAT WAS BROKEN. The band is taller than any hero it has ever been put in. At
- * 1440x900 it wants 828px of card stacked perpendicular to the rows — 768px of
- * screen height once rotated — plus another 361px because a row rotated 22
- * degrees CLIMBS as it crosses the box, plus the two 28px ramps: 1216px of
- * demand against 900px of hero. The overflow does not land evenly. A row climbs
- * to the RIGHT, so the top row leaves through the top of the box near its right
- * end and the bottom row leaves through the bottom near its LEFT end. Measured on
- * the live page: the top row was visible from x=611 to x=1241 and the bottom row
- * from x=747 to x=1377 — the same length of ribbon, shifted 136px apart. That is
- * Ben's "the bottom row is not positioned like the top row", and no amount of
- * adjusting the row masks could fix it, because the masks were not what was
- * cutting the rows. The box's own top and bottom were.
+ * THE BOUND FIRST, because it decides what "optimize" can mean. Three rows show
+ * about twelve cards between them and there are nine photographs, so three of
+ * the twelve MUST be repeats. No arrangement changes that, and no arrangement
+ * changes the average either: over the rows' relative drift, the expected number
+ * of distinct images on screen is 7.46 whatever order they are in. What an
+ * arrangement can change is the WORST MOMENT.
  *
- * WHAT HAPPENS NOW. The cards are drawn at whatever size makes the whole
- * parallelogram — three rows plus the diagonal's rise plus both ramps — fit the
- * box it has actually been given. Nothing reaches the vertical ramp any more, so
- * every row ends where its OWN mask says it ends, which is the same two vertical
- * lines for all three, the outer two shorter by the stagger. That is what the
- * previous round asked for and never got.
+ * Every row used to hold the same order, rotated by its index. Because the rows
+ * drift at different speeds, that rotation washes out, and at the worst phase
+ * all three windows land on the same run of the list: FOUR distinct photographs
+ * on a screen showing twelve cards. That is the wall of duplicates.
  *
- * WHY IT IS MEASURED RATHER THAN A BREAKPOINT. The demand depends on the box's
- * width (through the rise) and the supply on its height, and those two vary
- * independently — a 1366x768 laptop and a 1920x1080 monitor need different
- * answers, and the phone band needs a third. One measurement covers all of them
- * and cannot fall out of step with a Tailwind class somebody edits later.
+ * Giving each row its own STRIDE through the list fixes it. Row i walks the list
+ * in steps of the (i+1)-th integer coprime to n — 1, 2, 4 for nine — so each row
+ * still visits every photograph exactly once per lap, but three rows can only
+ * agree at phases satisfying a linear congruence, which is a handful instead of
+ * a run. Worst case goes from 4 distinct to 7.
  *
- * MIN_FIT stops it from answering "postage stamp" on a box that is hopeless,
- * which is a short phone in landscape. Below it the outer rows are nibbled again,
- * a little, which is the right way to fail.
+ * The strides must be COPRIME to n or a row would visit only part of the list
+ * and repeat inside its own window, which is worse than anything this fixes.
+ * Taking the first three coprimes was checked against an exhaustive search over
+ * every (stride, offset) triple for n = 6, 8, 9, 10, 12, 15, 20 and 24: it ties
+ * the optimum at all of them. Offsets do nothing at all — the rows' drift
+ * supplies every phase anyway — so there are none.
  */
-const MIN_FIT = 0.5;
-const BAND_SPAN = ROWS.length * BASE_CARD_H + (ROWS.length - 1) * BASE_GAP;
-
-function fitFor(boxW, boxH) {
-  if (!boxW || !boxH) return 1;
-  const clear = boxH - 2 * EDGE_PX - boxW * Math.abs(BAND_TAN);
-  return Math.max(MIN_FIT, Math.min(1, clear / (BAND_SPAN * BAND_COS)));
-}
-
-/** Card metrics at a given fit. Everything downstream reads these, not the base. */
-function metricsFor(fit) {
-  const cardW = Math.round(BASE_CARD_W * fit);
-  const cardH = Math.round(BASE_CARD_H * fit);
-  const gap = Math.round(BASE_GAP * fit);
-  return { cardW, cardH, gap, span: cardW + gap, pitch: cardH + gap };
+const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+function strideFor(n, rowIndex) {
+  let seen = 0;
+  for (let s = 1; s <= n; s++) {
+    if (gcd(s, n) !== 1) continue;
+    if (seen === rowIndex) return s;
+    seen += 1;
+  }
+  return 1;
 }
 
 /** How far a row's own fade runs, along the row. */
@@ -179,9 +171,6 @@ const ROW_FADE_PX = 44;
  *
  *   visible / rowWidth = 1 / (BAND_WIDTH_RATIO * cos(BAND_DEG)) = 0.568
  *   clipped per side   = (1 - 0.568) / 2                        = 0.216
- *
- * The fit does not enter into it: the band's WIDTH is a percentage of the box, so
- * it tracks the box however small the cards get. Only the row's height changes.
  */
 const BAND_WIDTH_RATIO = 1.9;
 const ROW_CLIPPED_FRACTION = (1 - 1 / (BAND_WIDTH_RATIO * BAND_COS)) / 2;
@@ -329,7 +318,7 @@ function rowAtPoint(clientX, clientY, box, band, m) {
  */
 const GATE_TAU = 190;
 
-function Ribbon({ items, speed, direction, index, paused, register, reduceMotion, sale, m, fit, bandWidth }) {
+function Ribbon({ items, speed, direction, index, paused, register, reduceMotion, sale, m, bandWidth }) {
   const baseX = useMotionValue(0);
   const rowRef = useRef(null);
 
@@ -353,11 +342,14 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
    * modulo the original nine.
    */
   const strip = useMemo(() => {
-    if (!items.length) return items;
-    const need = Math.max(1, Math.ceil(bandWidth / (items.length * m.span)));
-    if (need === 1) return items;
-    return Array.from({ length: need * items.length }, (_, j) => items[j % items.length]);
-  }, [items, bandWidth, m.span]);
+    const n = items.length;
+    if (!n) return items;
+    const copies = Math.max(1, Math.ceil(bandWidth / (n * m.span)));
+    const stride = strideFor(n, index);
+    const out = [];
+    for (let c = 0; c < copies; c++) for (let j = 0; j < n; j++) out.push(items[(stride * j) % n]);
+    return out;
+  }, [items, bandWidth, m.span, index]);
 
   /*
    * WHICH CARD THE SALE REPLACES: EVENLY SPACED, ONE PER ROW. Ben: "one per
@@ -546,7 +538,7 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
               }}
             >
               {isSaleSlot ? (
-                <HeroSaleCard sale={sale} scale={fit} />
+                <HeroSaleCard sale={sale} />
               ) : (
                 <img
                   src={item.imageUrl}
@@ -586,11 +578,10 @@ export default function HeroCardRibbon({ items, sales = [] }) {
    */
   const [frozen, setFrozen] = useState(false);
 
-  const [box, setBox] = useState({ w: 0, h: 0 });
-  const fit = useMemo(() => fitFor(box.w, box.h), [box]);
-  const m = useMemo(() => metricsFor(fit), [fit]);
+  const [boxW, setBoxW] = useState(0);
+  const m = M;
   // The band is BAND_WIDTH_RATIO of the box, which is what a row has to fill.
-  const bandWidth = box.w * BAND_WIDTH_RATIO;
+  const bandWidth = boxW * BAND_WIDTH_RATIO;
   const mRef = useRef(m);
   mRef.current = m;
 
@@ -599,8 +590,9 @@ export default function HeroCardRibbon({ items, sales = [] }) {
   }, []);
 
   /*
-   * MEASURE THE BOX, THEN SIZE THE CARDS TO IT. See fitFor: this is what makes
-   * the three rows end on the same two lines instead of drifting 136px apart.
+   * MEASURE THE BOX'S WIDTH, which is the only thing downstream needs: a row has
+   * to be filled with enough cards to cover the band, and the band is a
+   * percentage of the box. The cards themselves are a fixed size — see M.
    *
    * useLayoutEffect and a ResizeObserver rather than a window resize listener,
    * because the box is a percentage of the hero and changes size when the hero
@@ -610,12 +602,7 @@ export default function HeroCardRibbon({ items, sales = [] }) {
   useLayoutEffect(() => {
     const box = boxRef.current;
     if (!box) return undefined;
-    const measure = () =>
-      setBox((was) =>
-        was.w === box.clientWidth && was.h === box.clientHeight
-          ? was
-          : { w: box.clientWidth, h: box.clientHeight }
-      );
+    const measure = () => setBoxW(box.clientWidth);
     measure();
     if (typeof ResizeObserver === "undefined") return undefined;
     const ro = new ResizeObserver(measure);
@@ -834,16 +821,16 @@ export default function HeroCardRibbon({ items, sales = [] }) {
             <Ribbon
               key={i}
               index={i}
-              /* Offsetting the start of each row stops the three from lining up
-                 into one visible column of edges. */
-              items={[...items.slice(i), ...items.slice(0, i)]}
+              /* The list goes in unrotated: each row walks it with its own
+                 stride instead, which is what keeps the three from showing the
+                 same handful of photographs at once. See strideFor. */
+              items={items}
               speed={row.speed}
               direction={row.direction}
               paused={frozen || hovered === i || dragRow === i}
               register={register}
               reduceMotion={reduceMotion}
               m={m}
-              fit={fit}
               bandWidth={bandWidth}
               /* One sale per row, cycling, so three rows and two sales show the
                  first sale twice rather than leaving a row without one. Empty
