@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "framer-motion";
 import { Phone, ArrowDown, ChevronRight, ArrowRight, Calendar, Images } from "lucide-react";
@@ -125,6 +125,40 @@ export default function HeroSection() {
    * standing one, and a placeholder card per promised item would be inventing
    * photographs the feed never sent.
    */
+  /*
+   * THE TOWN-AND-DATE CARDS THAT SIT IN THE RIBBON, one per row.
+   *
+   * Derived here rather than in the ribbon because this is the only place that
+   * knows whether the feed can be believed. `trustworthy` is false for a
+   * degraded feed and for every prerendered snapshot, and in both cases this is
+   * an empty list and the ribbon is photographs only — the same rule the catalog
+   * button follows, for the same reason: a card naming a town and a date is a
+   * claim, and a static file cannot make it.
+   *
+   * A sale with no town or no readable start date is dropped rather than shown
+   * with a blank half. The card has no placeholder text by design.
+   *
+   * "MMM d" and not the long form: the card is 180px wide, and "October 11,
+   * 2026" wraps to three lines in it. The year is not printed at all — every
+   * sale in `upcoming` is ahead of today, so it can only be this one or the next.
+   */
+  const saleCards = useMemo(() => {
+    if (!trustworthy) return [];
+    const list = Array.isArray(data?.upcoming) ? data.upcoming : [];
+    return list
+      .map((entry) => {
+        const start = entry?.startsAt ? new Date(entry.startsAt) : null;
+        if (!entry?.city || !start || Number.isNaN(start.getTime())) return null;
+        return {
+          id: entry.slug || `${entry.city}-${entry.startsAt}`,
+          city: entry.city,
+          state: entry.state || "",
+          date: format(start, "MMM d"),
+        };
+      })
+      .filter(Boolean);
+  }, [trustworthy, data]);
+
   const published = sale ? readCatalog(sale.catalog) : null;
   const ribbonItems =
     published?.state === CATALOG_ITEMS && published.items.length ? published.items : STANDING_ITEMS;
@@ -137,7 +171,7 @@ export default function HeroSection() {
   return (
     <KineticGrid globalColor="monochrome" className="min-h-[100dvh]">
       {/* The hero's image asset, beside the type rather than behind it. */}
-      <HeroCardRibbon items={ribbonItems} />
+      <HeroCardRibbon items={ribbonItems} sales={saleCards} />
 
       {/*
         NOT max-w-7xl mx-auto, unlike every section below it, and that is the

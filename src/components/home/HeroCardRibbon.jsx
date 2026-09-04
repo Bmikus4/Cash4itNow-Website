@@ -10,6 +10,7 @@ import {
   useVelocity,
   wrap,
 } from "framer-motion";
+import HeroSaleCard from "@/components/home/HeroSaleCard";
 
 /**
  * The hero's image asset: diagonal ribbons of item cards on the right.
@@ -257,8 +258,23 @@ function rowAtPoint(clientX, clientY, box, band) {
   return index;
 }
 
-function Ribbon({ items, speed, direction, index, paused, register, reduceMotion }) {
+function Ribbon({ items, speed, direction, index, paused, register, reduceMotion, sale }) {
   const baseX = useMotionValue(0);
+
+  /*
+   * WHICH CARD THE SALE REPLACES, picked once when the row mounts. Ben asked for
+   * it to land randomly on each row rather than in the same column of all three,
+   * which would read as a deliberate stripe down the ribbon.
+   *
+   * useState's initialiser, not a bare Math.random() in the body: a value
+   * recomputed on every render would move the card whenever anything else in the
+   * row re-rendered, which is every time the pointer enters or leaves it.
+   *
+   * A snapshot never reaches this. `sale` is null unless a live feed answered,
+   * and the prerender crawl is told it is a snapshot — so the random slot is
+   * never used in a static build and two builds of one commit stay identical.
+   */
+  const [saleSlot] = useState(() => Math.floor(Math.random() * Math.max(1, items.length)));
   const { scrollY } = useScroll();
   const scrollVelocity = useVelocity(scrollY);
 
@@ -322,27 +338,37 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
   return (
     <div className="overflow-hidden" style={{ maskImage: rowFade(index), WebkitMaskImage: rowFade(index) }}>
       <motion.div className="flex" style={{ x, gap: GAP, skewX: reduceMotion ? 0 : skew }}>
-        {[...items, ...items].map((item, i) => (
-          <div
-            key={`${item.id}-${i}`}
-            className="shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]"
-            style={{ width: CARD_W, height: CARD_H }}
-          >
-            <img
-              src={item.imageUrl}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="h-full w-full object-cover"
-            />
-          </div>
-        ))}
+        {[...items, ...items].map((item, i) => {
+          // The list is doubled so the loop is seamless, so the slot matches
+          // twice — once per copy. That is right: the ribbon is one repeating
+          // strip and the sale should appear once per pass, not once ever.
+          const isSaleSlot = sale && i % items.length === saleSlot;
+          return (
+            <div
+              key={`${item.id}-${i}`}
+              className="shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]"
+              style={{ width: CARD_W, height: CARD_H }}
+            >
+              {isSaleSlot ? (
+                <HeroSaleCard city={sale.city} state={sale.state} date={sale.date} />
+              ) : (
+                <img
+                  src={item.imageUrl}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-cover"
+                />
+              )}
+            </div>
+          );
+        })}
       </motion.div>
     </div>
   );
 }
 
-export default function HeroCardRibbon({ items }) {
+export default function HeroCardRibbon({ items, sales = [] }) {
   const reduceMotion = useReducedMotion();
   const boxRef = useRef(null);
   const bandRef = useRef(null);
@@ -455,6 +481,11 @@ export default function HeroCardRibbon({ items }) {
               paused={hovered === i}
               register={register}
               reduceMotion={reduceMotion}
+              /* One sale per row, cycling, so three rows and two sales show the
+                 first sale twice rather than leaving a row without one. Empty
+                 list means no sale cards at all, which is the state the site is
+                 in whenever nothing is scheduled. */
+              sale={sales.length ? sales[i % sales.length] : null}
             />
           ))}
         </div>
