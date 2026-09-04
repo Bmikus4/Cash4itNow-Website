@@ -23,21 +23,28 @@ function couponMessage(sale) {
 }
 
 /*
- * THE PANEL IS AN OPAQUE DARK RED, and it had to stop being a tint.
+ * THE PANEL IS THE ACCENT, OPAQUE. Not a tint of it, and not a darker relative
+ * of it either — both were tried on Ben's screen and both were wrong.
  *
- * Ben, on /upcoming-sales: "the 10% off discount card is not dark red enough."
- * It was `bg-accent/10`, and a tint has no colour of its own — it takes its
- * darkness from whatever it is over. This component's type is written for the
- * dark band (text-background is WHITE here), but /upcoming-sales puts its cards
- * on the LIGHT one, so the panel composited to pale pink with white text on it:
- * not merely off-brand, unreadable. On the sale page's black band the same class
- * came out #2A1919, a grey-brown that read as a shadow. One class, two wrong
- * answers, and both of them looked like a colour choice.
+ * It began as `bg-accent/10`. A tint has no colour of its own: it takes its
+ * darkness from whatever it is over, and this panel is rendered on both of the
+ * site's bands. Every colour in this component is written for the dark one, so
+ * on /upcoming-sales — whose cards sit on the WHITE band — it composited to pale
+ * pink with white text on it, which is unreadable rather than merely off-brand.
+ * On the sale page's black band the same class came out #2A1919, a grey-brown
+ * that read as a shadow. One class, two wrong answers, both looking deliberate.
  *
- * --accent-deep is a surface: the accent's hue and saturation at a lightness
- * that carries white type on its own. The panel now looks the same wherever it
- * is put, which is the only property that makes the rest of this component's
- * colours true.
+ * A dedicated dark red (--accent-deep, 22% lightness) fixed the readability and
+ * failed the other half: "too dark/doesn't match". It was the only maroon thing
+ * on a page whose dates, links and buttons are all one specific red, and a
+ * near-miss of a brand colour reads as a mistake in a way a different colour
+ * does not. That token is gone; nothing else had asked for it.
+ *
+ * So the panel is `bg-accent` — the same red as the phone button, the badge and
+ * the section headings, matching by construction rather than by eye — and
+ * everything on it is white, including the SEND button, which had to invert
+ * because a red button on red is not a button. White on this red is 6.4:1 and
+ * white at 85% is 4.9:1, so the small print clears AA as well.
  */
 export default function SaleCouponSignup({ sale }) {
   const [phone, setPhone] = useState("");
@@ -70,9 +77,9 @@ export default function SaleCouponSignup({ sale }) {
 
   if (done) {
     return (
-      <div className="mt-4 border-2 border-accent bg-accent-deep p-3 flex items-center gap-2">
-        <Check className="w-4 h-4 text-accent flex-shrink-0" />
-        <p className="text-background/80 text-xs leading-snug">
+      <div className="mt-4 bg-accent p-3 flex items-center gap-2">
+        <Check className="w-4 h-4 text-white flex-shrink-0" />
+        <p className="text-white/85 text-xs leading-snug">
           You're in! We'll text your <strong>10% off</strong> coupon for the second day of the sale.
         </p>
       </div>
@@ -80,15 +87,15 @@ export default function SaleCouponSignup({ sale }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4 border-2 border-accent bg-accent-deep p-3">
+    <form onSubmit={handleSubmit} className="mt-4 bg-accent p-3">
       {honeypotField}
       <div className="flex items-center gap-2 mb-2">
-        <MessageSquare className="w-4 h-4 text-accent flex-shrink-0" />
-        <p className="font-heading font-black text-background text-xs uppercase tracking-wider leading-tight">
+        <MessageSquare className="w-4 h-4 text-white flex-shrink-0" />
+        <p className="font-heading font-black text-white text-xs uppercase tracking-wider leading-tight">
           Get 10% Off — Day 2
         </p>
       </div>
-      <p className="text-background/75 text-xs mb-2.5 leading-snug">
+      <p className="text-white/85 text-xs mb-2.5 leading-snug">
         Enter your number and we'll text you a coupon for the second day of the sale.
       </p>
       <div className="flex gap-2">
@@ -97,17 +104,17 @@ export default function SaleCouponSignup({ sale }) {
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="Mobile number"
-          className="flex-1 h-9 bg-background border border-foreground/20 px-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+          className="flex-1 h-9 bg-white text-foreground px-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/70"
         />
         <button
           type="submit"
           disabled={sending}
-          className="bg-accent text-white font-heading font-black text-xs uppercase tracking-wider px-3 h-9 hover:bg-accent/90 transition-colors disabled:opacity-60 flex items-center justify-center"
+          className="bg-white text-accent font-heading font-black text-xs uppercase tracking-wider px-3 h-9 hover:bg-white/90 transition-colors disabled:opacity-60 flex items-center justify-center"
         >
           {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Send"}
         </button>
       </div>
-      {error && <p className="text-background/70 text-xs mt-2 leading-snug">{error}</p>}
+      {error && <p className="text-white/85 text-xs mt-2 leading-snug">{error}</p>}
     </form>
   );
 }
