@@ -32,8 +32,10 @@ import { extname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { brotliCompressSync } from "node:zlib";
+import { resolveOrigins } from "../src/lib/origins.js";
 
 const ROOT = join(import.meta.dirname, "..");
+const API = resolveOrigins(process.env).connectOrigins;
 export const LIGHTHOUSE = "12.8.2";
 const RUNS = 3;
 const CONTROL_DELAY_MS = 1000;
@@ -130,7 +132,11 @@ async function lighthouse(url, device, scratch, n) {
   const cmd = [
     `"${process.execPath}" "${cli}" "${url}"`, `--output=json --output-path="${out}" --quiet`,
     "--only-categories=performance,accessibility,best-practices,seo",
-    `--chrome-flags="--headless=new --no-first-run --disable-extensions"`,
+    // --disable-web-security because the platform's CORS allows only www.cash4itnow.com. Without
+    // it every sales and catalog fetch from 127.0.0.1 was refused, and the first three tickets
+    // measured /shop's "Nothing listed" panel and a Home with no ribbon. It lifts CORS, not the
+    // CSP, so the page can still reach only the origins production allows.
+    `--chrome-flags="--headless=new --no-first-run --disable-extensions --disable-web-security"`,
     device === "desktop" ? "--preset=desktop" : "",
   ].join(" ");
   try {
@@ -162,6 +168,9 @@ function checkLoad(lhr, page, served) {
   const doc = lhr.audits["network-requests"]?.details?.items?.find((i) => i.resourceType === "Document");
   if (doc?.statusCode !== 200) throw new Error(`${page.path}: the document answered ${doc?.statusCode ?? "nothing"}`);
   if (served && served !== page.file) throw new Error(`${page.path}: the server answered with ${served}, not ${page.file}`);
+  const data = lhr.audits["network-requests"].details.items.filter((i) => ["Fetch", "XHR"].includes(i.resourceType) && API.some((o) => i.url.startsWith(o)));
+  const failed = data.filter((i) => !(i.statusCode >= 200 && i.statusCode < 300));
+  if (failed.length) throw new Error(`${page.path}: measured without its data; ${failed.map((i) => `${i.url} answered ${i.statusCode}`).join(", ")}`);
 }
 
 const median = (rows) => [...rows].sort((x, y) => x.perf - y.perf)[Math.floor(rows.length / 2)];
