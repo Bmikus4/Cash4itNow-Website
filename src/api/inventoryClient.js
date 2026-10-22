@@ -20,7 +20,7 @@
  * if the shop ever gains a count it can contradict, this has to grow the distinction back.
  */
 
-import { fetchCatalog } from "@/api/catalogClient";
+import { catalogUrl, fetchCatalog } from "@/api/catalogClient";
 
 export const INVENTORY_QUERY_KEY = ["shop-items"];
 
@@ -34,6 +34,8 @@ export const SHOP_SLUG = "shop";
  * the platform never stated.
  */
 const STATUS_OF_A_LISTED_ITEM = "available";
+
+export const inventoryUrl = () => catalogUrl(SHOP_SLUG);
 
 export async function fetchInventory() {
   const feed = await fetchCatalog(SHOP_SLUG);

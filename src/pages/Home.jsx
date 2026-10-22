@@ -10,6 +10,8 @@ import JewelrySection from "../components/home/JewelrySection";
 import PastSalesSection from "../components/home/PastSalesSection";
 import { usePageMeta } from "@/lib/usePageMeta";
 import { useJsonLd, localBusinessGraph, webSiteGraph } from "@/lib/structuredData";
+import { usePreloadData } from "@/lib/usePreloadData";
+import { salesUrl } from "@/api/salesClient";
 
 export default function Home() {
   // No arguments is the site default — but the call itself is required, or a
@@ -17,6 +19,7 @@ export default function Home() {
   usePageMeta();
   useJsonLd("business", localBusinessGraph());
   useJsonLd("website", webSiteGraph());
+  usePreloadData(salesUrl());
 
   return (
     <div>

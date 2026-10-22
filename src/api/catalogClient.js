@@ -37,12 +37,15 @@ export const catalogQueryKey = (slug) => ["public-catalog", slug];
  * degraded path is exactly the one that gets forgotten. Returning the state as DATA makes it
  * impossible to consume this feed without meeting it.
  */
+/** What fetchCatalog asks for, or null while a mock answers instead. */
+export const catalogUrl = (slug) => (MOCK_MODE || !slug ? null : `${ENDPOINT}?slug=${encodeURIComponent(slug)}`);
+
 export async function fetchCatalog(slug) {
   if (!slug) return { state: FEED_DEGRADED, items: [], count: null, reason: "no_slug" };
   if (MOCK_MODE === "degraded") return readCatalogFeed(degradedFeed.status, degradedFeed.body);
   if (MOCK_MODE === "1") return readCatalogFeed(healthyFeed.status, healthyFeed.body);
 
-  const url = `${ENDPOINT}?slug=${encodeURIComponent(slug)}`;
+  const url = catalogUrl(slug);
   let response;
   try {
     response = await fetch(url, { headers: { accept: "application/json" } });

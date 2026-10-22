@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ShoppingCart, Calendar, Search, X, Phone, PackageOpen } from "lucide-react";
 import { Link } from "react-router-dom";
-import { fetchInventory, INVENTORY_QUERY_KEY } from "@/api/inventoryClient";
+import { fetchInventory, inventoryUrl, INVENTORY_QUERY_KEY } from "@/api/inventoryClient";
+import { usePreloadData } from "@/lib/usePreloadData";
 import ShopItemCard from "@/components/shop/ShopItemCard";
 import EmptyPanel from "@/components/ui/EmptyPanel";
 import CartDrawer from "@/components/shop/CartDrawer";
@@ -13,6 +14,7 @@ import { usePageMeta } from "@/lib/usePageMeta";
 import { useJsonLd, breadcrumbGraph } from "@/lib/structuredData";
 
 export default function Shop() {
+  usePreloadData(inventoryUrl());
   usePageMeta({
     title: "Shop Antiques & Collectibles",
     description:

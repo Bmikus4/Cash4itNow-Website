@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Phone, CalendarClock } from "lucide-react";
-import { salesQuery, saleGridClass } from "@/api/salesClient";
+import { salesQuery, saleGridClass, salesUrl } from "@/api/salesClient";
+import { usePreloadData } from "@/lib/usePreloadData";
 import { isDegraded, isSnapshot } from "@/api/salesWire";
 import { CONTACT_PHONE, CONTACT_PHONE_HREF } from "@/api/leadForm";
 import SaleCard from "@/components/sales/SaleCard";
@@ -65,6 +66,7 @@ function pageMode(result, sales) {
 }
 
 export default function UpcomingSales() {
+  usePreloadData(salesUrl());
   usePageMeta({
     title: `${PAGE_LABEL} and Estate Sale Catalogs`,
     description:

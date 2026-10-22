@@ -114,6 +114,9 @@ const MOCK = {
  * path because a cached 503 outlives its own cause; retrying or polling it from
  * here would rebuild the same hazard one layer up.
  */
+/** What fetchSales asks for, or null while a mock answers instead. */
+export const salesUrl = () => (MOCK_MODE ? null : ENDPOINT);
+
 export async function fetchSales() {
   if (MOCK_MODE === "degraded") return readSalesResponse(DEGRADED_MOCK.status, DEGRADED_MOCK.body);
   if (MOCK_MODE === "empty") return readSalesResponse(200, { upcoming: [], past: [] });

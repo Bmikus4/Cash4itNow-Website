@@ -279,11 +279,29 @@ function sitemapFromRoutes() {
   }
 }
 
+/**
+ * Opens a connection to the platform while the HTML parses, for its catalogue
+ * photographs. An <img> loads with credentials and the data preloads
+ * (src/lib/usePreloadData.js) without, and the browser keeps those on separate
+ * connections, so the data preload does not open this one. No crossorigin here
+ * for that reason. The origin comes from src/lib/origins.js, like every other
+ * spelling of it.
+ */
+function preconnectPlatform() {
+  return {
+    name: 'preconnect-platform',
+    transformIndexHtml() {
+      return [{ tag: 'link', attrs: { rel: 'preconnect', href: resolveOrigins(process.env).api }, injectTo: 'head' }]
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   logLevel: 'error',
   plugins: [
     react(),
+    preconnectPlatform(),
     cspMatchesOrigins(),
     noStrayOriginLiterals(),
     shareImageIsReachable(),
