@@ -52,6 +52,8 @@ export default function ShopItemCard({ item, index, onBuyNow }) {
         )}
         <button
           onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id); }}
+          aria-label={isFavorite(item.id) ? `Remove ${item.title} from favorites` : `Save ${item.title} to favorites`}
+          aria-pressed={isFavorite(item.id)}
           className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center bg-background/80 hover:bg-background transition-colors"
         >
           <Heart className={`w-4 h-4 transition-colors ${isFavorite(item.id) ? "fill-accent text-accent" : "text-foreground/60"}`} />
@@ -61,9 +63,9 @@ export default function ShopItemCard({ item, index, onBuyNow }) {
       {/* Info */}
       <div className="p-4 flex flex-col flex-1">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="font-heading font-black text-foreground text-base uppercase tracking-tight leading-tight flex-1">
+          <h2 className="font-heading font-black text-foreground text-base uppercase tracking-tight leading-tight flex-1">
             {item.title}
-          </h3>
+          </h2>
         </div>
 
         {item.condition && (

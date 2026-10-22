@@ -672,7 +672,7 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
               }}
             >
               {isSaleSlot ? (
-                <HeroSaleCard sale={sale} />
+                <HeroSaleCard sale={sale} focusable={announced} />
               ) : (
                 <img
                   src={item.imageUrl}

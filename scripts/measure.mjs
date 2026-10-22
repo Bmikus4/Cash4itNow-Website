@@ -168,10 +168,11 @@ function checkLoad(lhr, page, served) {
   const doc = lhr.audits["network-requests"]?.details?.items?.find((i) => i.resourceType === "Document");
   if (doc?.statusCode !== 200) throw new Error(`${page.path}: the document answered ${doc?.statusCode ?? "nothing"}`);
   if (served && served !== page.file) throw new Error(`${page.path}: the server answered with ${served}, not ${page.file}`);
-  // Every request to the platform, not only fetches: a preloaded data request reports as "Other",
-  // and the image route answers 302 on its way to storage.
-  const data = lhr.audits["network-requests"].details.items.filter((i) => API.some((o) => i.url.startsWith(o)));
-  const failed = data.filter((i) => !(i.statusCode >= 200 && i.statusCode < 400));
+  // Every data request to the platform, not only fetches: a preloaded one reports as "Other". The
+  // image route is left out because the hero ribbon rebuilds its rows and cancels photographs in
+  // flight (status -1), which failed a gate on a page that had all its data.
+  const data = lhr.audits["network-requests"].details.items.filter((i) => API.some((o) => i.url.startsWith(o)) && !i.url.includes("/catalog/image/"));
+  const failed = data.filter((i) => !(i.statusCode >= 200 && i.statusCode < 300));
   if (failed.length) throw new Error(`${page.path}: measured without its data; ${failed.map((i) => `${i.url} answered ${i.statusCode}`).join(", ")}`);
 }
 

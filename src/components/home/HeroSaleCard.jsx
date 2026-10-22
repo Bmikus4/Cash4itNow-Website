@@ -83,7 +83,13 @@ function headingOf(sale) {
   return "Upcoming Events";
 }
 
-export default function HeroSaleCard({ sale }) {
+/**
+ * `focusable` is false on the ribbon's repeated copies. They are aria-hidden,
+ * and a hidden control that Tab still lands on is a stop a screen reader cannot
+ * name. Not `inert`: the copy on screen, which must stay clickable, is usually
+ * one of the repeats.
+ */
+export default function HeroSaleCard({ sale, focusable = true }) {
   const [copied, setCopied] = useState(false);
   const timer = useRef(null);
 
@@ -128,6 +134,7 @@ export default function HeroSaleCard({ sale }) {
           <button
             type="button"
             onClick={copy}
+            tabIndex={focusable ? undefined : -1}
             title={copied ? "Copied" : "Copy the sale details"}
             aria-label={copied ? "Sale details copied" : "Copy the sale details"}
             className="shrink-0 rounded-sm text-white/80 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
@@ -168,6 +175,7 @@ export default function HeroSaleCard({ sale }) {
 
       <Link
         to="/upcoming-sales"
+        tabIndex={focusable ? undefined : -1}
         className="group inline-flex items-center justify-center gap-1.5 border-2 border-white px-3 py-2.5 font-heading text-xs font-black uppercase leading-none tracking-widest transition-colors hover:bg-white hover:text-accent"
       >
         See More

@@ -62,7 +62,10 @@ export default function Navbar() {
             ))}
           </div>
 
-          <Link to="/favorites" className="hidden md:flex items-center justify-center relative p-2 text-background/80 hover:text-accent transition-colors">
+          <Link
+            to="/favorites"
+            aria-label={favorites.length > 0 ? `Favorites, ${favorites.length} saved` : "Favorites"}
+            className="hidden md:flex items-center justify-center relative p-2 text-background/80 hover:text-accent transition-colors">
             <Heart className={`w-5 h-5 ${favorites.length > 0 ? "fill-accent text-accent" : ""}`} />
             {favorites.length > 0 && (
               <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-accent text-white text-[10px] font-heading font-black flex items-center justify-center">
