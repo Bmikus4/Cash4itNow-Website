@@ -3,6 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Fonts asked for with the HTML, not after the stylesheet names them: the
+         heading font arriving late swapped every headline and moved LCP with it.
+         Vite hashes these to the same files src/index.css points at.
+         crossorigin is required: fonts load in CORS mode, and a preload without
+         it is fetched twice. -->
+    <link rel="preload" href="/src/fonts/oswald-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/src/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Cash 4 It Now — veteran-owned estate liquidation and full estate cleanout services in Pittsburgh, PA." />
     <title>Cash 4 It Now — Veteran-Owned Estate Liquidators</title>

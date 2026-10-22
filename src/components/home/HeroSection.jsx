@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "framer-motion";
 import { Phone, ArrowDown, ChevronRight, ArrowRight, Calendar, Images } from "lucide-react";
@@ -159,9 +159,27 @@ function newestCatalog(upcoming) {
   return [...list].sort((a, b) => time(a) - time(b))[0];
 }
 
+/**
+ * WHETHER THIS PAGE LOAD ARRIVED AS THE PRERENDERED HOME PAGE. Then the copy is
+ * already on screen and must not enter: main.jsx mounts with createRoot, which
+ * replaces the prerendered DOM, and the entrance re-mounted every line at
+ * opacity 0. A phone painted the headline, wiped it when the bundle booted, and
+ * faded it back in (filmstrip of 2026-10-21; Lighthouse charged the whole
+ * bundle to LCP for it). Arriving by a link inside the site, the entrance plays.
+ *
+ * Read at module evaluation, which happens before React's first commit empties
+ * #root. If Home is ever lazy-loaded this runs after that commit, reads an empty
+ * root, and the wipe comes back.
+ */
+let arrivedPrerendered =
+  typeof document !== "undefined" && Boolean(document.getElementById("root")?.firstElementChild);
+
 export default function HeroSection() {
   const [showForm, setShowForm] = useState(false);
   const reduceMotion = useReducedMotion();
+  const [prerendered] = useState(() => arrivedPrerendered);
+  useEffect(() => { arrivedPrerendered = false; }, []);
+  const still = reduceMotion || prerendered;
 
   // Shares SALES_QUERY_KEY with UpcomingSalesSection, so the home page asks the
   // platform for this list once rather than twice.
@@ -266,7 +284,7 @@ export default function HeroSection() {
   }, [published?.state, published?.items, publishedItems.data]);
 
   const rise = (delay) =>
-    reduceMotion
+    still
       ? {}
       : { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { delay } };
 
@@ -417,7 +435,7 @@ export default function HeroSection() {
         where Ben marked it on both layouts. Same for the scroll cue underneath.
       */}
       <motion.div
-        initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+        initial={still ? false : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
         className="pointer-events-auto absolute bottom-20 right-6 md:bottom-8 md:right-10 z-20 max-w-[calc(100%-3rem)] md:max-w-sm"

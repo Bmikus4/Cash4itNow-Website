@@ -41,11 +41,12 @@ except `fontFamily` and the accordion keyframes.
 | `--card` | `0 0% 97%` | barely used; cards here are borders, not fills |
 | `--radius` | `0rem` | **the identity** |
 
-Fonts: `--font-heading: Oswald` (400-700), `--font-body: Inter` (300-700).
+Fonts: `--font-heading: Oswald` (400-700), `--font-body: Inter` (300-700), self-hosted from
+`src/fonts/` (Latin only) since 2026-10-21. A new weight or script means a new file there, not
+a Google Fonts link: the CSP no longer allows Google's font origins.
 
-Two dead entries worth knowing before you touch either file: `Black Han Sans` is in the
-Google Fonts `@import` and used nowhere, and `--chart-4: 30 80% 40%` is the one non-red hue in
-the palette and is referenced by nothing.
+One dead entry worth knowing before you touch either file: `--chart-4: 30 80% 40%` is the one
+non-red hue in the palette and is referenced by nothing.
 
 A `.dark` block exists and inverts `--primary` to the accent, but no code ever adds the class.
 **The site is single-theme.** Contrast comes from alternating section bands instead (§4).
