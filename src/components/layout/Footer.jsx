@@ -1,10 +1,15 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Phone, Mail, MapPin } from "lucide-react";
 import { useLeadForm, CONTACT_PHONE, CONTACT_PHONE_HREF } from "@/api/leadForm";
 import Wordmark from "@/components/brand/Wordmark";
+import { LEGAL_NAME, ADDRESS_STREET, ADDRESS_LOCALITY } from "@/lib/business";
+import { SMS_OPT_IN_PATH } from "@/lib/smsOptIn";
 
 export default function Footer() {
+  // The SMS opt-in page may carry no form but the chat widget: carriers refuse the texting number
+  // otherwise (src/lib/smsOptIn.js). This is the only form the layout adds to every page.
+  const onOptInPage = useLocation().pathname === SMS_OPT_IN_PATH;
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState(null); // null | "loading" | "success" | "error"
   const [error, setError] = useState("");
@@ -92,13 +97,18 @@ export default function Footer() {
               </a>
               <span className="flex items-start gap-2 text-background/70 text-sm">
                 <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                Pittsburgh, PA &amp; Western Pennsylvania
+                <span>
+                  {ADDRESS_STREET}
+                  <br />
+                  {ADDRESS_LOCALITY}
+                </span>
               </span>
             </div>
           </div>
         </div>
 
         {/* Newsletter */}
+        {!onOptInPage && (
         <div className="border-t border-background/10 mt-10 pt-10">
           <div className="max-w-xl mx-auto text-center mb-6">
             <p className="font-heading text-accent text-xs uppercase tracking-widest mb-2">Stay In The Loop</p>
@@ -138,10 +148,22 @@ export default function Footer() {
             </p>
           )}
         </div>
+        )}
 
         <div className="border-t border-background/10 mt-10 pt-6 text-center">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-3">
+            {[
+              { label: "Text Alerts", path: SMS_OPT_IN_PATH },
+              { label: "Privacy Policy", path: "/privacy" },
+              { label: "Terms of Service", path: "/terms" },
+            ].map((link) => (
+              <Link key={link.path} to={link.path} className="font-heading text-background/70 hover:text-accent transition-colors uppercase text-xs tracking-wide">
+                {link.label}
+              </Link>
+            ))}
+          </div>
           <p className="text-background/40 text-xs">
-            © {new Date().getFullYear()} Cash 4 It Now Estate Liquidators. All rights reserved.
+            © {new Date().getFullYear()} {LEGAL_NAME}, Cash 4 It Now Estate Liquidators. All rights reserved.
           </p>
         </div>
       </div>

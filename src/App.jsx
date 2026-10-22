@@ -17,6 +17,9 @@ import ForProfessionals from './pages/ForProfessionals';
 import SalePage from './pages/SalePage';
 import BlogIndex from './pages/BlogIndex';
 import BlogPost from './pages/BlogPost';
+import TextAlerts from './pages/TextAlerts';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 
 // Every route here is public. There is no sign-in and no admin surface on the
 // website — the tool is the admin — so there is nothing to gate and nothing to
@@ -49,6 +52,9 @@ function App() {
                 <Route path="/blog/:slug" element={<BlogPost />} />
                 <Route path="/sale/:slug" element={<SalePage />} />
                 <Route path="/favorites" element={<Favorites />} />
+                <Route path="/text-alerts" element={<TextAlerts />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
                 {/* Inside the layout: a 404 outside it is a dead end with no
                     nav, which is what a mistyped URL or a stale link off a
                     Facebook post lands on. */}

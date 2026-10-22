@@ -28,6 +28,7 @@ import {
   skipLine,
 } from "./prerender/lib.mjs";
 import { POSTS } from "../src/content/posts.js";
+import { SMS_OPT_IN_PATH, SMS_WIDGET, smsWidgetTag } from "../src/lib/smsOptIn.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROOT, "dist");
@@ -304,7 +305,12 @@ async function main() {
       try {
         const raw = await snapshot(session.send, route);
         if (!raw.includes("<div id=\"root\">") || raw.length < 2000) throw new Error(`suspiciously small render (${raw.length} bytes)`);
-        const html = stripNondeterminism(raw);
+        // The SMS opt-in page carries GoHighLevel's tag in its static HTML, for compliance scanners
+        // that read the page without running it. Added here, after the snapshot, because the page
+        // does not load the widget while being snapshotted (src/pages/TextAlerts.jsx).
+        const page = stripNondeterminism(raw);
+        const html = route === SMS_OPT_IN_PATH ? page.replace("</body>", `${smsWidgetTag()}</body>`) : page;
+        if (route === SMS_OPT_IN_PATH && !html.includes(SMS_WIDGET.id)) throw new Error("the SMS opt-in page has no chat widget tag");
         const hidden = countHiddenSections(html);
         const out = path.join(DIST, outputPathFor(route));
         fs.mkdirSync(path.dirname(out), { recursive: true });

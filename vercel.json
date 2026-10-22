@@ -21,6 +21,9 @@
     { "source": "/blog/what-happens-after-you-call", "destination": "/blog/what-happens-after-you-call/index.html" },
     { "source": "/blog/paperwork-and-photographs-found-in-a-clearout", "destination": "/blog/paperwork-and-photographs-found-in-a-clearout/index.html" },
     { "source": "/blog/do-i-need-an-appraisal-before-selling", "destination": "/blog/do-i-need-an-appraisal-before-selling/index.html" },
+    { "source": "/text-alerts", "destination": "/text-alerts/index.html" },
+    { "source": "/privacy", "destination": "/privacy/index.html" },
+    { "source": "/terms", "destination": "/terms/index.html" },
     { "source": "/sale/:slug", "destination": "/app.html" },
     { "source": "/(.*)", "destination": "/404.html" }
   ],
@@ -36,7 +39,7 @@
         { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https:; connect-src 'self' https://cash4itnow-platform.vercel.app; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' https://widgets.leadconnectorhq.com https://stcdn.leadconnectorhq.com https://services.leadconnectorhq.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://widgets.leadconnectorhq.com https://stcdn.leadconnectorhq.com; font-src 'self' data:; img-src 'self' data: https:; connect-src 'self' https://cash4itnow-platform.vercel.app https://services.leadconnectorhq.com https://services.msgsndr.com https://widgets.leadconnectorhq.com; worker-src 'self' blob:; frame-src 'self' https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
         }
       ]
     },
