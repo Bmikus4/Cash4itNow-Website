@@ -56,13 +56,15 @@ export default function PropertyServicesSection() {
               <div className="aspect-[4/3] overflow-hidden">
                 {s.collage ? (
                   <div className="w-full h-full grid grid-cols-2 gap-0.5">
-                    <img src={s.collage[0]} alt="Pressure washing driveway" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
-                    <img src={s.collage[1]} alt="Painting exterior railing" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                    <img src={s.collage[0]} alt="Pressure washing driveway" loading="lazy" decoding="async" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                    <img src={s.collage[1]} alt="Painting exterior railing" loading="lazy" decoding="async" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                   </div>
                 ) : (
                   <img
                     src={s.image}
                     alt={s.title}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                   />
                 )}

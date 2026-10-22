@@ -34,6 +34,8 @@ export default function JewelrySection() {
             <img
               src={JEWELRY_IMG}
               alt="Estate jewelry collection"
+              loading="lazy"
+              decoding="async"
               className="w-full h-64 md:h-full object-cover hover:scale-105 transition-transform duration-700"
             />
           </div>

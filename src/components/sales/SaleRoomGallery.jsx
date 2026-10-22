@@ -96,7 +96,7 @@ export default function SaleRoomGallery({ rooms }) {
                       aspect-square box would shrink every photograph by the height of its own
                       title, and a lot with a two-line title would be smaller than its neighbour. */}
                   <span className="aspect-square overflow-hidden block">
-                    <img src={photo.url} alt={photo.title || `${room.room_name || "Sale"} photo ${photoIdx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <img loading="lazy" decoding="async" src={photo.url} alt={photo.title || `${room.room_name || "Sale"} photo ${photoIdx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   </span>
                   {/* CAPTIONED ONLY WHERE A TITLE EXISTS, which is the same distinction the chip
                       above makes. A room photograph is a place and has no title; an itemised lot

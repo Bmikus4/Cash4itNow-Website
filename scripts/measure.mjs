@@ -62,6 +62,16 @@ export function serve(dir, { delayMs = 0 } = {}) {
   const rewrites = (vercel.rewrites ?? []).map((r) => [pattern(r.source), r.destination]);
   const headers = (vercel.headers ?? []).map((h) => [pattern(h.source), h.headers]);
   const docs = [];
+  // Compressed before the server listens. Done on first request instead, brotli on the 594 KB
+  // bundle blocked this process for about 1.2 s, every response queued behind it, and Lighthouse's
+  // simulator, which estimates server time per origin from what it observed, charged that stall
+  // to the site (the first load of each gate ran slow, ticket W-20261022T013706Z).
+  for (const rel of readdirSync(dir, { recursive: true })) {
+    const abs = join(dir, rel);
+    if (!COMPRESS.has(extname(abs)) || !statSync(abs).isFile()) continue;
+    const key = `${abs}:${statSync(abs).mtimeMs}`;
+    if (!brotli.has(key)) brotli.set(key, brotliCompressSync(readFileSync(abs)));
+  }
   const find = (rel) => {
     const abs = join(dir, rel);
     if (!existsSync(abs)) return null;
@@ -79,10 +89,9 @@ export function serve(dir, { delayMs = 0 } = {}) {
       const out = { "content-type": TYPES[ext] ?? "application/octet-stream", "cache-control": "public, max-age=0, must-revalidate" };
       for (const [re, list] of headers) if (re.test(path)) for (const h of list) out[h.key.toLowerCase()] = h.value;
       let body = readFileSync(join(dir, rel));
-      if (COMPRESS.has(ext) && /\bbr\b/.test(req.headers["accept-encoding"] ?? "")) {
-        const key = `${join(dir, rel)}:${statSync(join(dir, rel)).mtimeMs}`;
-        if (!brotli.has(key)) brotli.set(key, brotliCompressSync(body));
-        body = brotli.get(key);
+      const packed = brotli.get(`${join(dir, rel)}:${statSync(join(dir, rel)).mtimeMs}`);
+      if (packed && /\bbr\b/.test(req.headers["accept-encoding"] ?? "")) {
+        body = packed;
         out["content-encoding"] = "br";
       }
       if (ext === ".html") docs.push({ path, file: rel });

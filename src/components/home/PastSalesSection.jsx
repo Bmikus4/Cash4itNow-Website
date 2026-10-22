@@ -55,7 +55,7 @@ export default function PastSalesSection() {
             >
               {sale.imageUrl && (
                 <div className="overflow-hidden">
-                  <img
+                  <img loading="lazy" decoding="async"
                     src={sale.imageUrl}
                     alt={sale.title}
                     className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-500"

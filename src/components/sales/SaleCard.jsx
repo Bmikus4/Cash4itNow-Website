@@ -75,7 +75,7 @@ export default function SaleCard({ sale, index = 0, tone = "dark", showSignup = 
     >
       {sale.imageUrl && (
         <div className="overflow-hidden">
-          <img
+          <img loading="lazy" decoding="async"
             src={sale.imageUrl}
             alt={sale.title}
             className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
