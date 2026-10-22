@@ -1,0 +1,12 @@
+#!/bin/sh
+# Every tip pushed from this repo was confirmed and ticketed by scripts/session.mjs.
+# Promoting a gated lead-capture tip to main passes, because that tip already carries its ticket.
+while read local_ref local_sha remote_ref remote_sha; do
+  [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
+  if ! git log -1 --format=%B "$local_sha" | grep -qE '^Ticket W-[0-9]{8}T[0-9]{6}Z$'; then
+    echo "pre-push: the tip for $remote_ref ($local_sha) carries no session-gate ticket." >&2
+    echo "Commit through: node scripts/session.mjs -m \"...\" -- <paths>" >&2
+    exit 1
+  fi
+done
+exit 0

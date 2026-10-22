@@ -1,0 +1,3 @@
+#!/bin/sh
+# Enforces scripts/commit-standard.mjs. Active once `git config core.hooksPath .githooks` is set.
+exec node scripts/commit-standard.mjs "$1"

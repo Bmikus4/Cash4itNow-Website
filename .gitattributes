@@ -1,0 +1,2 @@
+feed/feed.jsonl merge=union
+.githooks/* text eol=lf
