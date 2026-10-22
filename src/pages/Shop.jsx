@@ -181,11 +181,11 @@ export default function Shop() {
                 actions={
                   <>
                     <a
-                      href="tel:4129697757"
+                      href="tel:4122139963"
                       className="inline-flex items-center justify-center gap-2 bg-accent text-white px-6 py-4 font-heading font-black text-lg uppercase tracking-wider hover:bg-accent/90 transition-colors"
                     >
                       <Phone className="w-5 h-5" />
-                      412-969-7757
+                      412-213-9963
                     </a>
                     <Link
                       to="/contact"

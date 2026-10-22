@@ -354,11 +354,11 @@ export default function HeroSection() {
 
             <motion.div {...rise(0.5)} className="flex flex-col sm:flex-row flex-wrap gap-4">
               <a
-                href="tel:4129697757"
+                href="tel:4122139963"
                 className="inline-flex items-center justify-center gap-3 bg-accent text-white px-8 py-5 font-heading font-black text-xl md:text-2xl uppercase tracking-wider hover:bg-accent/90 transition-colors"
               >
                 <Phone className="w-6 h-6" />
-                412-969-7757
+                412-213-9963
               </a>
               {!showForm && (
                 <button

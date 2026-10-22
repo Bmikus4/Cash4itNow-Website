@@ -27,7 +27,7 @@ export const SITE_ORIGIN = resolveOrigins(import.meta.env).site;
 export const SHARE_IMAGE = "/share.jpg";
 export const SHARE_IMAGE_SIZE = { width: 1200, height: 630 };
 const SHARE_IMAGE_ALT =
-  "Cash 4 It Now Estate Liquidators, veteran-owned, 412-969-7757, with before and after photographs of an estate cleanout";
+  "Cash 4 It Now Estate Liquidators, veteran-owned, 412-213-9963, with before and after photographs of an estate cleanout";
 
 /**
  * Creates, updates or removes one meta tag. `og:*` is addressed by `property`

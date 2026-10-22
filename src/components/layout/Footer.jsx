@@ -87,9 +87,9 @@ export default function Footer() {
               Contact Us
             </p>
             <div className="flex flex-col gap-3">
-              <a href="tel:4129697757" className="flex items-center gap-2 text-background hover:text-accent transition-colors font-heading font-bold text-lg">
+              <a href="tel:4122139963" className="flex items-center gap-2 text-background hover:text-accent transition-colors font-heading font-bold text-lg">
                 <Phone className="w-4 h-4" />
-                412-969-7757
+                412-213-9963
               </a>
               <a href="mailto:info@cash4itnow.com" className="flex items-center gap-2 text-background/70 hover:text-accent transition-colors text-sm">
                 <Mail className="w-4 h-4" />

@@ -138,7 +138,7 @@ tracking-widest` labels, then the newsletter, then copyright, each separated by 
 border-background/10 mt-10 pt-10`.
 
 **The phone number is the primary CTA on every surface** and appears in the nav, the hero, the
-footer and the CTA bands. `tel:4129697757`.
+footer and the CTA bands. `tel:4122139963`.
 
 ## 7. Motion
 

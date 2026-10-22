@@ -144,8 +144,8 @@ export default function CheckoutModal({ item, onClose }) {
                 {/* Alt contact */}
                 <div className="flex items-center gap-2 justify-center pt-1">
                   <span className="text-xs text-muted-foreground">Or call us directly:</span>
-                  <a href="tel:4129697757" className="text-xs font-heading font-black text-accent uppercase hover:underline flex items-center gap-1">
-                    <Phone className="w-3 h-3" /> 412-969-7757
+                  <a href="tel:4122139963" className="text-xs font-heading font-black text-accent uppercase hover:underline flex items-center gap-1">
+                    <Phone className="w-3 h-3" /> 412-213-9963
                   </a>
                 </div>
               </form>

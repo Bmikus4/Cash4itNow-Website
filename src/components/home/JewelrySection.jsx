@@ -72,7 +72,7 @@ export default function JewelrySection() {
               </div>
 
               <a
-                href="tel:4129697757"
+                href="tel:4122139963"
                 className="inline-flex items-center gap-3 bg-accent text-white px-8 py-4 font-heading font-black text-xl uppercase hover:bg-accent/90 transition-colors w-fit"
               >
                 <Phone className="w-5 h-5" />

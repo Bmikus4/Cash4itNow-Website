@@ -57,11 +57,11 @@ export default function CtaSection() {
               We'll be in touch shortly. Or call us right now:
             </p>
             <a
-              href="tel:4129697757"
+              href="tel:4122139963"
               className="inline-flex items-center gap-3 bg-white text-foreground px-8 py-4 font-heading font-black text-2xl uppercase hover:bg-white/90 transition-colors"
             >
               <Phone className="w-6 h-6" />
-              412-969-7757
+              412-213-9963
             </a>
           </motion.div>
         </div>
@@ -182,7 +182,7 @@ export default function CtaSection() {
               </Button>
               <span className="text-foreground/40 text-sm font-heading uppercase">or</span>
               <a
-                href="tel:4129697757"
+                href="tel:4122139963"
                 className="inline-flex items-center gap-2 border-2 border-foreground/20 px-6 h-14 font-heading font-black text-xl uppercase hover:border-accent hover:text-accent transition-colors"
               >
                 <Phone className="w-5 h-5" />

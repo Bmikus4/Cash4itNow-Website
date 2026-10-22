@@ -74,11 +74,11 @@ export default function Navbar() {
             )}
           </Link>
           <a
-            href="tel:4129697757"
+            href="tel:4122139963"
             className="hidden md:flex items-center gap-2 bg-accent text-white px-5 py-2.5 font-heading text-sm font-bold tracking-wider uppercase hover:bg-accent/90 transition-colors"
           >
             <Phone className="w-4 h-4" />
-            412-969-7757
+            412-213-9963
           </a>
 
           <button
@@ -140,14 +140,14 @@ export default function Navbar() {
               </Link>
             </motion.div>
             <motion.a
-              href="tel:4129697757"
+              href="tel:4122139963"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.39 }}
               className="flex items-center gap-2 bg-accent text-white px-8 py-4 font-heading text-xl font-bold uppercase mt-4"
             >
               <Phone className="w-5 h-5" />
-              412-969-7757
+              412-213-9963
             </motion.a>
           </motion.div>
         )}

@@ -2,8 +2,8 @@ import React, { useCallback, useId, useRef, useState } from "react";
 import { startLeadTimer, submitLead } from "@/api/leadClient";
 import { resolveOrigins } from "@/lib/origins";
 
-export const CONTACT_PHONE = "412-969-7757";
-export const CONTACT_PHONE_HREF = "tel:4129697757";
+export const CONTACT_PHONE = "412-213-9963";
+export const CONTACT_PHONE_HREF = "tel:4122139963";
 
 // The honeypot has to be a real, focusable input a bot will happily fill.
 // `type="hidden"` and `display:none` are the two things a form-filling script

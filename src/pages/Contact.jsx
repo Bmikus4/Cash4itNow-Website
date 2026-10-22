@@ -40,7 +40,7 @@ export default function Contact() {
   usePageMeta({
     title: "Contact — Free Estate Evaluation",
     description:
-      "Call 412-969-7757, or send four details and we call you back. Free estate evaluations across Pittsburgh and Western Pennsylvania, seven days a week.",
+      "Call 412-213-9963, or send four details and we call you back. Free estate evaluations across Pittsburgh and Western Pennsylvania, seven days a week.",
   });
   useJsonLd(
     "breadcrumb",

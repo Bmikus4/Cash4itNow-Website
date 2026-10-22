@@ -143,9 +143,9 @@ export default function Categories() {
           </div>
           <div className="text-center">
             <p className="text-background/60 mb-6 font-heading uppercase tracking-wide">Don't see your item? Call us — we buy almost everything.</p>
-            <a href="tel:4129697757" className="inline-flex items-center gap-3 bg-accent text-white px-10 py-5 font-heading font-black text-2xl uppercase hover:bg-accent/90 transition-colors">
+            <a href="tel:4122139963" className="inline-flex items-center gap-3 bg-accent text-white px-10 py-5 font-heading font-black text-2xl uppercase hover:bg-accent/90 transition-colors">
               <Phone className="w-6 h-6" />
-              412-969-7757
+              412-213-9963
             </a>
           </div>
         </div>
