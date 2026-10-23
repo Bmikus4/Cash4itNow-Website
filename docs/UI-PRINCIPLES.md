@@ -154,9 +154,21 @@ has not read them:
 
 - `useReducedMotion()` is checked **per component**, not by a global blanket, so a component
   stays correct when it is moved to a page that has no blanket. `CategoryCardFan` documents why.
-- **Any infinite animation must carry `data-loop-animation`.** The prerender crawl strips the
-  inline `style` of those elements, which is what makes two builds of one commit byte-identical.
-  The hero's bouncing arrow is the existing example.
+- **An infinite animation is a CSS `@keyframes` animation, never framer-motion.** A framer loop
+  writes an inline transform every frame, which costs a full main-thread frame sixty times a
+  second for as long as the page is open (half a slowed phone's main thread, measured 2026-10-22),
+  and makes the prerender snapshot nondeterministic. The hero's scroll cue (`.hero-cue`) is the
+  example. A framer loop that cannot be avoided must carry `data-loop-animation`, whose inline
+  `style` the prerender crawl strips so two builds of one commit stay byte-identical.
+- **An infinite animation stops when nobody can see it.** Chrome re-styles a running animation's
+  element on every frame the main thread draws, compositor animation or not, and a scroll draws
+  every frame: the hero's arrow running far off screen made scrolling the rest of Home 72% busy
+  instead of 44% (4x-slowed phone, 2026-10-22). Pause it from an IntersectionObserver, as the
+  arrow and the ribbon rows do.
+- **Nothing reacts to scroll by writing style every frame.** The ribbon's lean is written only
+  when it moves a quarter of a degree, and its speed-up is the Web Animation's `playbackRate`:
+  bound through framer, the lean re-layered the whole page on every scroll frame (Layerize 662ms
+  against 52ms over the same scroll).
 
 Also load-bearing and easy to break: transforms that must be composed by framer rather than
 written as a Tailwind class or a raw inline `transform`. Tailwind only emits CSS for *literal*

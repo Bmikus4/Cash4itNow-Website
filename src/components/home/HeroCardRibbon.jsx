@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   motion,
-  useAnimationFrame,
   useMotionValue,
   useReducedMotion,
   useScroll,
@@ -162,6 +161,12 @@ function strideFor(n, rowIndex) {
 
 /** How far a row's own fade runs, along the row. */
 const ROW_FADE_PX = 44;
+
+/**
+ * The drift's playbackRate for a scroll's speed-up, in 5% steps: every change is main-thread work
+ * on the compositor's animation, a scroll changes the speed-up every frame, and 5% does not show.
+ */
+const driftRate = (v) => Math.round((1 + v) * 20) / 20;
 
 /**
  * HOW MUCH OF A ROW IS OFF SCREEN AT EACH END, as a fraction of the row's own
@@ -435,9 +440,12 @@ function share(items, index) {
  */
 const GATE_TAU = 190;
 
-function Ribbon({ items, speed, direction, index, paused, register, reduceMotion, sale, m, bandWidth, boxH }) {
+function Ribbon({ items, speed, direction, index, paused, register, reduceMotion, sale, m, bandWidth, boxH, velocityFactor, skew }) {
   const baseX = useMotionValue(0);
   const rowRef = useRef(null);
+  const stripRef = useRef(null);
+  // Hands the strip to the frame loop; see the driver below. Anything that moves a row calls it first.
+  const wakeRef = useRef(() => {});
 
   /*
    * ONE COPY OF THE STRIP MUST BE AT LEAST AS WIDE AS THE BAND, or the loop
@@ -538,18 +546,25 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
   const [liveSale, setLiveSale] = useState(-1);
   const liveRef = useRef(-1);
 
-  const { scrollY } = useScroll();
-  const scrollVelocity = useVelocity(scrollY);
-
-  // The spring is the rubber. Raw scroll velocity is spiky and would read as a
-  // glitch; damped, it overshoots slightly and settles, which is what makes the
-  // ribbon feel like it has weight rather than like it is being redrawn.
-  const smoothVelocity = useSpring(scrollVelocity, { damping: 42, stiffness: 180, mass: 0.7 });
-
-  // clamp:false on purpose — a fast flick should be allowed past the ends of the
-  // range and even reverse the drift, which is most of the effect.
-  const velocityFactor = useTransform(smoothVelocity, [-2200, 2200], [-4, 4], { clamp: false });
-  const skew = useTransform(smoothVelocity, [-2200, 2200], [5, -5], { clamp: false });
+  /*
+   * THE LEAN IS WRITTEN BY HAND, IN QUARTER DEGREES. Every skew write re-layered the whole page:
+   * bound through framer it was written on every frame of every scroll, and scrolling the hero on a
+   * 4x-slowed phone spent 662ms re-layering with it and 52ms without (2026-10-22). A quarter of a
+   * degree moves a 260px card's corner about half a pixel. A listener and not a style binding,
+   * because framer re-renders a bound value on every set, changed or not.
+   */
+  const leanRef = useRef(null);
+  useEffect(() => {
+    const el = leanRef.current;
+    if (!el || reduceMotion) return undefined;
+    let shown = 0;
+    return skew.on("change", (v) => {
+      const q = Math.round(v * 4) / 4;
+      if (q === shown) return;
+      shown = q;
+      el.style.transform = q ? `skewX(${q}deg)` : "";
+    });
+  }, [skew, reduceMotion]);
 
   // THIS ROW'S OWN WHEEL, not one shared by all three. Ben: scrolling should work
   // per-row. The parent hit-tests the pointer and pushes deltas into whichever
@@ -564,8 +579,14 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
   useEffect(
     () =>
       register(index, {
-        nudge: (delta) => nudgeRaw.set(nudgeRaw.get() + delta),
-        dragBy: (delta) => baseX.set(baseX.get() + delta),
+        nudge: (delta) => {
+          wakeRef.current();
+          nudgeRaw.set(nudgeRaw.get() + delta);
+        },
+        dragBy: (delta) => {
+          wakeRef.current();
+          baseX.set(baseX.get() + delta);
+        },
       }),
     [index, register, nudgeRaw, baseX]
   );
@@ -584,37 +605,168 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
 
   const lastNudge = useRef(0);
 
-  useAnimationFrame((_t, delta) => {
-    // THE DRIFT IS SKIPPED UNDER REDUCED MOTION; THE LIVENESS CHECK BELOW IS NOT.
-    // It used to be one early return covering both, which left the sale card's
-    // See More and copy button permanently pointer-events:none for anyone who
-    // asks their system not to animate — a still ribbon whose one control was
-    // dead. A stationary row still has to answer where its sale card is.
-    if (!reduceMotion) {
-      drift(delta);
-    }
+  // What the liveness check reads, current on every render without restarting the driver.
+  const liveInputs = useRef(null);
+  liveInputs.current = { sale, index, pitch: m.pitch, boxH, offsets, saleSlot, n: strip.length, saleW };
 
-    if (!sale) return;
-    const rowWidth = rowRef.current?.offsetWidth ?? 0;
-    if (!rowWidth) return;
-    const dead = rowInsets(index, rowWidth, m.pitch, boxH);
-    const from = dead.left + ROW_FADE_PX;
-    const to = rowWidth - dead.right - ROW_FADE_PX;
-    const shift = wrap(-half, 0, baseX.get());
-    let live = -1;
-    let best = saleW / 2;
-    for (const j of [saleSlot, saleSlot + strip.length]) {
-      const left = offsets[j] + shift;
-      const seen = Math.min(left + saleW, to) - Math.max(left, from);
-      if (seen >= best) { best = seen; live = j; }
-    }
-    // Only on a change: this runs every frame and setState every frame would
-    // re-render the row sixty times a second to say the same thing.
-    if (live !== liveRef.current) {
-      liveRef.current = live;
-      setLiveSale(live);
-    }
-  });
+  /*
+   * TWO DRIVERS, ONE POSITION.
+   *
+   * Left alone, a row drifts at a constant speed, and that is now a Web Animation the browser's
+   * compositor runs by itself. It was a JavaScript loop writing the transform every frame, and on a
+   * 4x-slowed phone that held the main thread at 76-100% with nobody touching anything: every frame
+   * re-layered the strips, committed them and re-ran every IntersectionObserver on the page
+   * (measured 2026-10-22).
+   *
+   * Hover, press, drag and the wheel are the original frame loop, unchanged: the moment one
+   * starts, the compositor's position is read back into baseX and `drift` takes over, and once the
+   * row is steady again (unpaused, gate open, wheel spring at rest) it is handed back. Off screen,
+   * neither runs.
+   *
+   * A SCROLL STAYS ON THE COMPOSITOR. Its speed-up is the animation's playbackRate and its lean is
+   * a skew on the wrapper, not the strip. Handing a scroll to the frame loop restyled and re-layered
+   * all three strips every frame, and scrolling the hero on a 4x-slowed phone held the main thread
+   * at 99%, 64% with the ribbon hidden (2026-10-22).
+   */
+  useEffect(() => {
+    const el = stripRef.current;
+    const row = rowRef.current;
+    if (!el || !row || !half) return undefined;
+    const period = (half / speed) * 1000;
+    let anim = null;
+    let from = 0;
+    let raf = 0;
+    let last = 0;
+    let onScreen = true;
+
+    const position = () => {
+      if (!anim) return baseX.get();
+      const t = (Number(anim.currentTime) || 0) % period;
+      return from + direction * half * (t / period);
+    };
+
+    // THE LIVENESS CHECK RUNS EVEN WHEN THE DRIFT DOES NOT. It used to share the drift's early
+    // return under reduced motion, which left the sale card's See More and copy button permanently
+    // pointer-events:none for anyone who asks their system not to animate.
+    const checkLive = () => {
+      const k = liveInputs.current;
+      if (!k.sale) return;
+      const rowWidth = row.offsetWidth;
+      if (!rowWidth) return;
+      const dead = rowInsets(k.index, rowWidth, k.pitch, k.boxH);
+      const left0 = dead.left + ROW_FADE_PX;
+      const right0 = rowWidth - dead.right - ROW_FADE_PX;
+      const shift = wrap(-half, 0, position());
+      let live = -1;
+      let best = k.saleW / 2;
+      for (const j of [k.saleSlot, k.saleSlot + k.n]) {
+        const left = k.offsets[j] + shift;
+        const seen = Math.min(left + k.saleW, right0) - Math.max(left, left0);
+        if (seen >= best) { best = seen; live = j; }
+      }
+      // Only on a change: setState on every check would re-render the row to say the same thing.
+      if (live !== liveRef.current) {
+        liveRef.current = live;
+        setLiveSale(live);
+      }
+    };
+
+    const steady = () =>
+      !pausedRef.current &&
+      gate.current > 0.999 &&
+      Math.abs(nudge.get() - nudgeRaw.get()) < 0.5 &&
+      Math.abs(nudge.getVelocity()) < 1;
+
+    const toCompositor = () => {
+      if (anim || reduceMotion || !onScreen) return;
+      from = wrap(-half, 0, baseX.get());
+      baseX.set(from);
+      anim = el.animate(
+        [{ transform: `translateX(${from}px)` }, { transform: `translateX(${from + direction * half}px)` }],
+        { duration: period, iterations: Infinity, easing: "linear" },
+      );
+      // A thousand laps of headroom: a hard enough flick runs the drift backwards, and an
+      // animation played backwards past its start simply ends.
+      anim.currentTime = period * 1000;
+      anim.playbackRate = driftRate(velocityFactor.get());
+    };
+
+    const frame = (now) => {
+      const delta = last ? Math.min(now - last, 100) : 1000 / 60;
+      last = now;
+      drift(delta);
+      checkLive();
+      if (steady()) {
+        raf = 0;
+        last = 0;
+        toCompositor();
+        return;
+      }
+      raf = requestAnimationFrame(frame);
+    };
+
+    const toJs = () => {
+      if (reduceMotion || !onScreen) return;
+      if (anim) {
+        const p = position();
+        anim.cancel();
+        anim = null;
+        baseX.set(p);
+        // Written now rather than on framer's next frame, or the strip shows its stale inline
+        // transform for one frame between the animation ending and framer catching up.
+        el.style.transform = `translateX(${wrap(-half, 0, p)}px)`;
+      }
+      if (!raf) raf = requestAnimationFrame(frame);
+    };
+    wakeRef.current = toJs;
+
+    const io = new IntersectionObserver(([entry]) => {
+      onScreen = entry.isIntersecting;
+      if (onScreen) {
+        if (anim) anim.play();
+        else toJs();
+      } else {
+        anim?.pause();
+        cancelAnimationFrame(raf);
+        raf = 0;
+        last = 0;
+      }
+    });
+    io.observe(row);
+
+    // The frame loop reads velocityFactor itself, so only the compositor's animation needs telling.
+    const unsubscribe = velocityFactor.on("change", (v) => {
+      if (!anim) return;
+      const rate = driftRate(v);
+      if (rate !== anim.playbackRate) anim.playbackRate = rate;
+    });
+    const liveTimer = setInterval(() => {
+      if (!raf && onScreen) checkLive();
+    }, 200);
+
+    checkLive();
+    toJs();
+
+    return () => {
+      if (anim) {
+        baseX.set(position());
+        anim.cancel();
+      }
+      cancelAnimationFrame(raf);
+      clearInterval(liveTimer);
+      unsubscribe();
+      io.disconnect();
+      wakeRef.current = () => {};
+    };
+    // drift reads refs and motion values only; restarting on its identity would restart the
+    // driver every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [half, speed, direction, reduceMotion, baseX, nudge, nudgeRaw, velocityFactor]);
+
+  // A pause or an unpause changes the gate, which only the frame loop eases.
+  useEffect(() => {
+    wakeRef.current();
+  }, [paused]);
 
   function drift(delta) {
     // Hovering, pressing or dragging a card stops THAT row and nothing else,
@@ -644,7 +796,11 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
 
   return (
     <div ref={rowRef} className="overflow-hidden" style={{ maskImage: fade, WebkitMaskImage: fade }}>
-      <motion.div className="flex" style={{ x, gap: m.gap, skewX: reduceMotion ? 0 : skew }}>
+      {/* will-change: the strip moves every frame, and without its own layer the browser repainted
+          every photograph and card in it each time, about 80% of a 4x-slowed phone's main thread
+          with the hero idle (2026-10-22). On its own layer a frame only slides what is painted. */}
+      <div ref={leanRef} style={{ willChange: "transform" }}>
+      <motion.div ref={stripRef} className="flex" style={{ x, gap: m.gap, willChange: "transform" }}>
         {[...strip, ...strip].map((item, i) => {
           // The list is doubled so the loop is seamless, so the slot matches
           // twice — once per copy. That is right: the ribbon is one repeating
@@ -686,6 +842,7 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
           );
         })}
       </motion.div>
+      </div>
     </div>
   );
 }
@@ -711,6 +868,37 @@ export default function HeroCardRibbon({ items, sales = [] }) {
    * finger. A mouse keeps hover and never sees this.
    */
   const [frozen, setFrozen] = useState(false);
+
+  // ONE SCROLL CHAIN FOR ALL THREE ROWS. Each row ran its own velocity, spring and transforms from
+  // the same scroll, three times the work for one answer.
+  const { scrollY } = useScroll();
+  const scrollVelocity = useVelocity(scrollY);
+
+  // ZERO WHILE THE RIBBON IS OFF SCREEN. Every scroll anywhere on the page moved this spring, the
+  // skew and the drift factor, and each move restyled all three strips: a 4x-slowed phone
+  // scrolling the sections below the hero spent every frame on a ribbon nobody could see
+  // (2026-10-22).
+  const onScreenRef = useRef(true);
+  const seenVelocity = useTransform(scrollVelocity, (v) => (onScreenRef.current ? v : 0));
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return undefined;
+    const io = new IntersectionObserver(([entry]) => {
+      onScreenRef.current = entry.isIntersecting;
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  // The spring is the rubber. Raw scroll velocity is spiky and would read as a
+  // glitch; damped, it overshoots slightly and settles, which is what makes the
+  // ribbon feel like it has weight rather than like it is being redrawn.
+  const smoothVelocity = useSpring(seenVelocity, { damping: 42, stiffness: 180, mass: 0.7 });
+
+  // clamp:false on purpose — a fast flick should be allowed past the ends of the
+  // range and even reverse the drift, which is most of the effect.
+  const velocityFactor = useTransform(smoothVelocity, [-2200, 2200], [-4, 4], { clamp: false });
+  const skew = useTransform(smoothVelocity, [-2200, 2200], [5, -5], { clamp: false });
 
   const [box, setBox] = useState({ w: 0, h: 0 });
   const m = M;
@@ -769,9 +957,16 @@ export default function HeroCardRibbon({ items, sales = [] }) {
    * passive:false is required. Chrome makes wheel listeners passive by default,
    * a passive listener cannot preventDefault, and without it the page scrolls
    * anyway and the whole thing silently does nothing.
+   *
+   * ATTACHED ONLY WHILE THE POINTER IS OVER A ROW. A blocking wheel listener on
+   * the window makes the browser wait for the main thread on every wheel step
+   * anywhere on the page before it may scroll, which is the definition of a
+   * janky scroll. Over a row is the only place this handler does anything, so
+   * it exists only then.
    */
+  const overRow = hovered >= 0;
   useEffect(() => {
-    if (reduceMotion) return undefined;
+    if (reduceMotion || !overRow) return undefined;
     if (typeof window === "undefined") return undefined;
     if (!window.matchMedia?.("(hover: hover) and (pointer: fine)").matches) return undefined;
 
@@ -792,7 +987,7 @@ export default function HeroCardRibbon({ items, sales = [] }) {
       window.removeEventListener("wheel", onWheel);
       document.removeEventListener("mouseleave", onLeave);
     };
-  }, [reduceMotion]);
+  }, [reduceMotion, overRow]);
 
   /*
    * DRAGGING, on a mouse and on a finger alike — Ben: "the cards should be
@@ -982,6 +1177,8 @@ export default function HeroCardRibbon({ items, sales = [] }) {
               m={m}
               bandWidth={bandWidth}
               boxH={box.h}
+              velocityFactor={velocityFactor}
+              skew={skew}
               /* One sale per row, cycling, so three rows and two sales show the
                  first sale twice rather than leaving a row without one. Empty
                  list means no sale cards at all, which is the state the site is

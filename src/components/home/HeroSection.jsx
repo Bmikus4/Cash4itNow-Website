@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "framer-motion";
 import { Phone, ArrowDown, ChevronRight, ArrowRight, Calendar, Images } from "lucide-react";
@@ -180,6 +180,20 @@ export default function HeroSection() {
   const [prerendered] = useState(() => arrivedPrerendered);
   useEffect(() => { arrivedPrerendered = false; }, []);
   const still = reduceMotion || prerendered;
+
+  // Why the scroll cue stops once it moves up the screen: see where cueRef is attached.
+  const cueRef = useRef(null);
+  useEffect(() => {
+    const box = cueRef.current;
+    const cue = box?.firstElementChild;
+    if (!box || !cue) return undefined;
+    // Root shrunk to the bottom fifth of the screen, where a scroll cue lives.
+    const io = new IntersectionObserver(([entry]) => {
+      cue.style.animationPlayState = entry.isIntersecting ? "running" : "paused";
+    }, { rootMargin: "-80% 0px 0px 0px" });
+    io.observe(box);
+    return () => io.disconnect();
+  }, []);
 
   // Shares SALES_QUERY_KEY with UpcomingSalesSection, so the home page asks the
   // platform for this list once rather than twice.
@@ -478,20 +492,23 @@ export default function HeroSection() {
           </Link>
       </motion.div>
 
-      {/* data-loop-animation: this never settles, so framer-motion rewrites its
-          inline transform every frame and a snapshot captures whichever value the
-          capture happened to land on. The prerender crawl strips the style
-          attribute of anything carrying this, which is what makes two builds of
-          one commit byte-identical. The grid canvas does NOT need it: a canvas
-          paints pixels and never writes to the inline style the snapshot reads. */}
-      <motion.div
-        data-loop-animation
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 pointer-events-none"
-        animate={{ y: [0, 8, 0] }}
-        transition={{ duration: 2, repeat: Infinity }}
-      >
-        <ArrowDown className="w-6 h-6 text-white/40" />
-      </motion.div>
+      {/* A CSS animation (.hero-cue in index.css), not framer-motion. Framer animated this from
+          JavaScript, so an 8px bounce forced a full main-thread frame (style, layers, commit, every
+          IntersectionObserver) sixty times a second for as long as the hero was open: about half of
+          a 4x-slowed phone's main thread with the page idle (2026-10-22). The compositor runs a CSS
+          transform animation by itself. It is on the inner span because the outer div's transform
+          is its centring. Writing no inline style, it needs no data-loop-animation.
+
+          IT STILL BOUNCES ONLY WHILE IT IS IN THE BOTTOM FIFTH OF THE SCREEN. Chrome re-styles a
+          running animation's element on every frame the main thread draws, and a scroll draws
+          every frame: with the hero long out of view, a phone scrolling the sections below was 72%
+          busy with it running and 44% with it stopped. Once a visitor has scrolled the arrow up the
+          screen, it has done its job. */}
+      <div ref={cueRef} className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+        <span className="hero-cue block">
+          <ArrowDown className="w-6 h-6 text-white/40" />
+        </span>
+      </div>
       </div>
 
       {/*

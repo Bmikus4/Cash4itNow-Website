@@ -182,3 +182,13 @@
     font-size: max(16px, 1em);
   }
 }
+
+/* The hero's scroll cue. A compositor animation on purpose: see HeroSection.jsx. */
+@keyframes hero-cue {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
+.hero-cue { animation: hero-cue 2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-cue { animation: none; }
+}

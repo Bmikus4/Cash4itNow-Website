@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Phone, Heart } from "lucide-react";
 import { useFavorites } from "@/lib/FavoritesContext";
@@ -26,16 +26,26 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
 
+  /*
+   * SCROLLED = THE TOP 40PX MARKER HAS LEFT THE SCREEN, asked of an IntersectionObserver and not a
+   * scroll listener. A listener ran on every frame of every scroll on every page, and reading
+   * window.scrollY in it made the browser recalculate style on the spot: 225ms of a 4x-slowed
+   * phone's main thread over three seconds of scrolling Home's hero (2026-10-22).
+   */
+  const markRef = useRef(null);
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const el = markRef.current;
+    if (!el) return undefined;
+    const io = new IntersectionObserver(([entry]) => setScrolled(!entry.isIntersecting));
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
 
   useEffect(() => { setIsOpen(false); }, [location]);
 
   return (
     <>
+      <div ref={markRef} aria-hidden="true" className="pointer-events-none absolute left-0 top-0 h-10 w-px" />
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled ? "bg-foreground shadow-lg" : "bg-foreground"
       }`}>

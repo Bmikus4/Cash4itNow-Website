@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * MODIFIED FROM UPSTREAM. Four changes, all of them containment, and each one is
+ * MODIFIED FROM UPSTREAM. Five changes, all of them containment, and each one is
  * listed here so a future re-copy of the original does not silently undo them.
  *
  *   1. The canvas was `fixed inset-0` and sized to window.innerWidth/Height, so
@@ -22,8 +22,15 @@
  *   4. prefers-reduced-motion was not consulted at all. It now paints one static
  *      frame and starts no loop, and it re-evaluates if the setting changes.
  *
- * (2) is the one that matters most on a phone. The rest follow from it: a loop
- * you intend to stop needs to know which element it belongs to.
+ *   5. The loop ran every frame while on screen even when nothing moved. It now
+ *      stops once the highlight settles and the ripples fade, wakes on mouse
+ *      movement, a click or a resize, ignores touch movement (a finger scrolling
+ *      the page is not a pointer), and copies the static dot texture from a cached
+ *      layer instead of redrawing it. Measured 2026-10-22 on a 4x-slowed phone:
+ *      the idle hero held the main thread at 100% before this.
+ *
+ * (2) and (5) are the ones that matter on a phone. The rest follow from them: a
+ * loop you intend to stop needs to know which element it belongs to.
  */
 
 import { useEffect, useRef, useCallback, ReactNode } from "react";
@@ -94,6 +101,9 @@ export default function KineticGrid({
   const rafRef = useRef<number>(0);
   const runningRef = useRef(false);
   const sizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
+  // The background fill and the 1,650-dot texture never move, so they are painted once per size
+  // into this layer and copied each frame instead of being redrawn dot by dot.
+  const textureRef = useRef<{ canvas: HTMLCanvasElement; key: string } | null>(null);
 
   // ── Warp ────────────────────────────────────────────────────────────────────
 
@@ -197,21 +207,28 @@ export default function KineticGrid({
         },
       }[globalColor ?? "default"];
 
-      ctx.clearRect(0, 0, W, H);
-
-      // Background
-      ctx.fillStyle = theme.bg;
-      ctx.fillRect(0, 0, W, H);
-
-      // Static background dot texture
-      ctx.fillStyle = "rgba(255,255,255,0.05)";
-      for (let x = DOT_SPACING / 2; x < W; x += DOT_SPACING) {
-        for (let y = DOT_SPACING / 2; y < H; y += DOT_SPACING) {
-          ctx.beginPath();
-          ctx.arc(x, y, 0.7, 0, Math.PI * 2);
-          ctx.fill();
+      // Background and static dot texture, from the cached layer.
+      const key = `${W}x${H}:${theme.bg}`;
+      if (textureRef.current?.key !== key) {
+        const layer = textureRef.current?.canvas ?? document.createElement("canvas");
+        layer.width = W;
+        layer.height = H;
+        const lctx = layer.getContext("2d");
+        if (lctx) {
+          lctx.fillStyle = theme.bg;
+          lctx.fillRect(0, 0, W, H);
+          lctx.fillStyle = "rgba(255,255,255,0.05)";
+          for (let x = DOT_SPACING / 2; x < W; x += DOT_SPACING) {
+            for (let y = DOT_SPACING / 2; y < H; y += DOT_SPACING) {
+              lctx.beginPath();
+              lctx.arc(x, y, 0.7, 0, Math.PI * 2);
+              lctx.fill();
+            }
+          }
         }
+        textureRef.current = { canvas: layer, key };
       }
+      ctx.drawImage(textureRef.current.canvas, 0, 0);
 
       // Update ripples
       for (let i = ripples.length - 1; i >= 0; i--) {
@@ -349,8 +366,25 @@ export default function KineticGrid({
 
       m.x = lerpN(m.x, t.x, LERP_SPEED);
       m.y = lerpN(m.y, t.y, LERP_SPEED);
+      const settled = Math.abs(m.x - t.x) < 0.5 && Math.abs(m.y - t.y) < 0.5;
+      if (settled) {
+        m.x = t.x;
+        m.y = t.y;
+      }
 
       draw(now);
+
+      /*
+       * THE LOOP STOPS WHEN THE PICTURE DOES. Once the highlight has caught up with the pointer
+       * and the last ripple has faded, every further frame would be identical, and drawing them
+       * held a mid-range phone's main thread at 100% for as long as the hero was on screen
+       * (measured 2026-10-22, 4x CPU slowdown). Pointer movement, a click or a resize wakes it.
+       */
+      if (settled && ripplesRef.current.length === 0) {
+        runningRef.current = false;
+        rafRef.current = 0;
+        return;
+      }
       rafRef.current = requestAnimationFrame(animate);
     },
     [draw],
@@ -364,6 +398,7 @@ export default function KineticGrid({
     if (!canvas || !host) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let onScreen = false;
 
     // Sized from the HOST, not the window. The canvas is a layer inside this
     // section now, so the viewport is the wrong measurement in every case where
@@ -413,8 +448,15 @@ export default function KineticGrid({
       return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     };
 
+    /*
+     * A FINGER IS NOT A POINTER HERE. On a phone, pointermove fires while a finger scrolls the page,
+     * and warping the grid under a scroll kept the loop running for the whole gesture with nothing
+     * to look at but the scroll. A tap still sends its ripple through `click`.
+     */
     const onPointerMove = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return;
       targetMouseRef.current = toLocal(e);
+      wake();
     };
 
     /*
@@ -441,11 +483,13 @@ export default function KineticGrid({
       if (e.clientX <= 0) p.x = -beyond;
       else if (e.clientX >= window.innerWidth - 1) p.x = rect.width + beyond;
       targetMouseRef.current = p;
+      wake();
     };
 
     const onClick = (e: MouseEvent) => {
       const p = toLocal(e);
       ripplesRef.current.push({ ...p, radius: 0, opacity: 1, born: performance.now() });
+      wake();
     };
 
     window.addEventListener("pointermove", onPointerMove, { passive: true });
@@ -464,9 +508,13 @@ export default function KineticGrid({
       rafRef.current = 0;
     };
 
+    // Something moved: run the loop until the picture settles again (see `animate`).
+    const wake = () => {
+      if (onScreen && !document.hidden) start();
+    };
+
     // The loop exists only while this section is on screen. A marketing page is
     // mostly the parts of it you are not looking at.
-    let onScreen = false;
     const io = new IntersectionObserver(
       ([entry]) => {
         onScreen = entry.isIntersecting;
