@@ -31,3 +31,6 @@ dist-ssr
 .vite
 
 .vercel
+
+# Written before every build by scripts/fetch-posts.mjs from the platform
+src/content/posts.feed.js

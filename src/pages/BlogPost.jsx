@@ -5,7 +5,7 @@ import { Link, useParams } from "react-router-dom";
 import { POSTS, postBySlug, postPath } from "@/content/posts";
 import { CONTACT_PHONE, CONTACT_PHONE_HREF } from "@/api/leadForm";
 import { usePageMeta, SITE_ORIGIN } from "@/lib/usePageMeta";
-import { useJsonLd, articleGraph, breadcrumbGraph } from "@/lib/structuredData";
+import { useJsonLd, articleGraph, breadcrumbGraph, faqGraph } from "@/lib/structuredData";
 
 /**
  * The body is deliberately NOT animated on scroll.
@@ -120,6 +120,7 @@ export default function BlogPost() {
         }
   );
   useJsonLd("article", post ? articleGraph(post, `${SITE_ORIGIN}${postPath(post)}`) : null);
+  useJsonLd("faq", post ? faqGraph(post, `${SITE_ORIGIN}${postPath(post)}`) : null);
   useJsonLd(
     "breadcrumb",
     breadcrumbGraph(

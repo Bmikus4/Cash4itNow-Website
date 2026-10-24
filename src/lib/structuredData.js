@@ -108,6 +108,25 @@ export function articleGraph(post, url) {
   };
 }
 
+/**
+ * The page's question and its answer as an FAQPage: the shape answer engines read a question page
+ * as. The answer is the post's own answer paragraphs, nothing added.
+ */
+export function faqGraph(post, url) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "@id": `${url}#faq`,
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: post.question,
+        acceptedAnswer: { "@type": "Answer", text: post.answer.join(" ") },
+      },
+    ],
+  };
+}
+
 /** The index, as a Blog whose posts are listed in the order the page shows them. */
 export function blogGraph(posts, pathFor) {
   return {

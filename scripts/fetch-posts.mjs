@@ -1,0 +1,110 @@
+/**
+ * Fetches the blog's posts from the platform and writes src/content/posts.feed.js, which
+ * src/content/posts.js re-exports as POSTS. Runs before every build and dev server.
+ *
+ * WHY THE PLATFORM IS THE SOURCE. Posts are written, checked and published in the admin
+ * (Visibility > Posts); publishing there rebuilds this site through a Vercel deploy hook. A second
+ * list kept here would be the one-thing-two-representations defect posts.js was written against.
+ *
+ * IT FAILS CLOSED. If the feed cannot be read, or reads as something other than posts, the build
+ * stops and Vercel keeps serving the last good deploy. Building on with an empty or stale list would
+ * publish a blog with its pages missing, and every rewrite, sitemap entry and crawl derives from it.
+ *
+ * Usage: node scripts/fetch-posts.mjs   (POSTS_FEED_URL overrides the address, for a local platform)
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const OUT = path.join(ROOT, "src/content/posts.feed.js");
+const FEED = process.env.POSTS_FEED_URL || "https://admin.cash4itnow.com/api/public/posts";
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+const isText = (v) => typeof v === "string" && v.trim() !== "";
+const isTextList = (v) => Array.isArray(v) && v.every(isText);
+
+/** Every field the pages read, checked here so a malformed post stops the build, not a render. */
+function problemsOf(post, i) {
+  const at = `post ${i} (${post?.slug ?? "no slug"})`;
+  const problems = [];
+  if (!post || typeof post !== "object") return [`${at}: not an object`];
+  if (!isText(post.slug) || !SLUG.test(post.slug)) problems.push(`${at}: slug`);
+  for (const field of ["question", "title", "description"]) if (!isText(post[field])) problems.push(`${at}: ${field}`);
+  if (!DAY.test(post.published ?? "") || !DAY.test(post.updated ?? "")) problems.push(`${at}: published/updated must be YYYY-MM-DD`);
+  if (!isTextList(post.answer) || post.answer.length === 0) problems.push(`${at}: answer`);
+  if (!Array.isArray(post.sections)) problems.push(`${at}: sections`);
+  else
+    post.sections.forEach((s, j) => {
+      if (!isText(s?.heading)) problems.push(`${at}: section ${j} heading`);
+      if (s.body !== undefined && !isTextList(s.body)) problems.push(`${at}: section ${j} body`);
+      if (s.list !== undefined && !isTextList(s.list)) problems.push(`${at}: section ${j} list`);
+      if (s.links !== undefined && !(Array.isArray(s.links) && s.links.every((l) => isText(l?.label) && isText(l?.to)))) problems.push(`${at}: section ${j} links`);
+      // A table's corner header is often empty (the live estate-sale comparison's is), so cells may be "".
+      const strings = (v) => Array.isArray(v) && v.every((c) => typeof c === "string");
+      if (s.table !== undefined && !(typeof s.table?.caption === "string" && strings(s.table?.columns) && Array.isArray(s.table?.rows) && s.table.rows.every(strings))) problems.push(`${at}: section ${j} table`);
+    });
+  return problems;
+}
+
+async function read() {
+  let last;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const res = await fetch(FEED, { signal: AbortSignal.timeout(20_000), headers: { accept: "application/json" } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (error) {
+      last = error;
+      await new Promise((ok) => setTimeout(ok, attempt * 2000));
+    }
+  }
+  throw last;
+}
+
+/** Returns rather than calling process.exit: on Windows, exiting while fetch's socket closes trips a libuv assertion. */
+async function main() {
+  let payload;
+  try {
+    payload = await read();
+  } catch (error) {
+    console.error(`fetch-posts: could not read ${FEED}: ${error.message}. The build stops so the last good deploy stays up.`);
+    process.exitCode = 1;
+    return;
+  }
+  const posts = Array.isArray(payload) ? payload : payload?.posts;
+  if (!Array.isArray(posts) || posts.length === 0) {
+    console.error(`fetch-posts: ${FEED} returned no posts. An empty blog is a fault upstream, not an edit; the build stops.`);
+    process.exitCode = 1;
+    return;
+  }
+  const problems = posts.flatMap(problemsOf);
+  const slugs = posts.map((p) => p.slug);
+  if (new Set(slugs).size !== slugs.length) problems.push("two posts share a slug");
+  if (problems.length) {
+    console.error(`fetch-posts: the feed's posts would not render:\n  ${problems.join("\n  ")}`);
+    process.exitCode = 1;
+    return;
+  }
+
+  // Only the fields the pages read, in a fixed key order: two builds of one feed write the same bytes.
+  const clean = posts.map((p) => ({
+    slug: p.slug,
+    question: p.question,
+    title: p.title,
+    description: p.description,
+    published: p.published,
+    updated: p.updated,
+    answer: p.answer,
+    sections: p.sections,
+  }));
+  const body =
+    `// Generated by scripts/fetch-posts.mjs from ${FEED}. Not committed and not edited:\n` +
+    `// posts are written and published in the admin, Visibility > Posts.\n` +
+    `export const FEED_POSTS = ${JSON.stringify(clean, null, 2)};\n`;
+  fs.writeFileSync(OUT, body);
+  console.log(`fetch-posts: ${clean.length} posts from ${FEED}`);
+}
+
+await main();

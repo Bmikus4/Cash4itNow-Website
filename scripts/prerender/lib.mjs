@@ -124,6 +124,36 @@ export function rewritesFor(routes, snapshotted) {
 }
 
 /**
+ * Whether a vercel.json rewrite source answers a route: the same path, or a pattern whose `:param`
+ * segments match the route's. One `/blog/:slug` rule covers every post, which is what lets a post
+ * published in the admin go live without anybody editing vercel.json.
+ */
+export function sourceCovers(source, route) {
+  if (source === route) return true;
+  if (!source.includes(":")) return false;
+  const sourceParts = source.split("/");
+  const routeParts = route.split("/");
+  if (sourceParts.length !== routeParts.length) return false;
+  return sourceParts.every((part, i) => (part.startsWith(":") ? routeParts[i] !== "" : part === routeParts[i]));
+}
+
+/** The file a rewrite sends a route to, with the route's values put into the destination's `:params`. */
+export function destinationFor(rule, route) {
+  const values = {};
+  const routeParts = route.split("/");
+  rule.source.split("/").forEach((part, i) => {
+    if (part.startsWith(":")) values[part.slice(1)] = routeParts[i];
+  });
+  return rule.destination
+    .split("/")
+    .map((part) => (part.startsWith(":") ? values[part.slice(1)] ?? part : part))
+    .join("/");
+}
+
+/** A rewrite destination that serves a route: a snapshot's index.html, params allowed. */
+export const SNAPSHOT_DESTINATION = /^\/[\w.:/-]+\/index\.html$/;
+
+/**
  * framer-motion starts every below-the-fold section at opacity:0 and reveals it
  * with whileInView. A snapshot taken without scrolling captures markup that says
  * invisible, and a crawler reads a page of hidden content. The crawl scrolls, and

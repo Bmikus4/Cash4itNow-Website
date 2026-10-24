@@ -23,7 +23,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { noindexRoutes, postExpansions, routesFromApp } from "./prerender/lib.mjs";
+import { destinationFor, noindexRoutes, postExpansions, routesFromApp, sourceCovers } from "./prerender/lib.mjs";
 import { POSTS } from "../src/content/posts.js";
 import { resolveOrigins } from "../src/lib/origins.js";
 
@@ -73,14 +73,16 @@ if (extra.length) fail(`sitemap lists ${extra.join(", ")}, which the app does no
 // so it is what decides which file a crawler receives.
 const rewrites = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8")).rewrites ?? [];
 for (const route of [...actual].sort()) {
-  const rule = rewrites.find((r) => r.source === route);
+  // The first rule that covers it, as Vercel applies them in order; a `/blog/:slug` rule covers every post.
+  const rule = rewrites.find((r) => r.source !== "/(.*)" && sourceCovers(r.source, route));
   if (!rule) {
     fail(`sitemap lists ${route} but vercel.json has no rewrite for it — it would fall to the 404`);
     continue;
   }
-  const file = path.join(DIST, rule.destination);
+  const destination = destinationFor(rule, route);
+  const file = path.join(DIST, destination);
   if (!fs.existsSync(file)) {
-    fail(`sitemap lists ${route}, vercel.json sends it to ${rule.destination}, and that file is not in dist/`);
+    fail(`sitemap lists ${route}, vercel.json sends it to ${destination}, and that file is not in dist/`);
   }
 }
 

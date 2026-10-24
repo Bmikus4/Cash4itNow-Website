@@ -30,7 +30,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { routesFromApp, postExpansions, outputPathFor } from "./prerender/lib.mjs";
+import { routesFromApp, postExpansions, outputPathFor, sourceCovers, SNAPSHOT_DESTINATION } from "./prerender/lib.mjs";
 import { POSTS } from "../src/content/posts.js";
 import { resolveOrigins } from "../src/lib/origins.js";
 
@@ -194,10 +194,8 @@ const { static: staticRoutes, dynamic } = routesFromApp(app, postExpansions(POST
 const rewrites = readJson("vercel.json").rewrites ?? [];
 
 {
-  const covering = new Set(
-    rewrites.filter((r) => r.destination === "/index.html" || /^\/[\w./-]+\/index\.html$/.test(r.destination)).map((r) => r.source)
-  );
-  const missing = [...staticRoutes, ...dynamic].filter((r) => !covering.has(r));
+  const covering = rewrites.filter((r) => r.destination === "/index.html" || SNAPSHOT_DESTINATION.test(r.destination)).map((r) => r.source);
+  const missing = [...staticRoutes, ...dynamic].filter((r) => !covering.some((source) => sourceCovers(source, r)));
   if (missing.length) fail("routes: every route has a rewrite", missing.join(", "), "those routes work in dev and 404 in production, with nothing failing loudly in between");
   else pass("routes: every route has a rewrite", `${staticRoutes.length} static + ${dynamic.length} dynamic, all covered`);
 }

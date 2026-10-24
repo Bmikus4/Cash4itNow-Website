@@ -4,7 +4,7 @@ import path from 'path'
 import { defineConfig } from 'vite'
 import { resolveOrigins } from './src/lib/origins.js'
 import { POSTS } from './src/content/posts.js'
-import { noindexRoutes, postExpansions, routesFromApp, sitemapXml } from './scripts/prerender/lib.mjs'
+import { noindexRoutes, postExpansions, routesFromApp, sitemapXml, sourceCovers, SNAPSHOT_DESTINATION } from './scripts/prerender/lib.mjs'
 
 /**
  * Fails the build if vercel.json's `connect-src` does not allow every origin the
@@ -163,11 +163,9 @@ function spaRoutesAreRewritten() {
       // answered by that file and the rewrite for `/` never runs. A route
       // rewritten to /app.html is therefore client-rendered on purpose.
       const SHELLS = new Set(['/index.html', '/app.html'])
-      const covering = new Set(
-        (config.rewrites ?? [])
-          .filter((rule) => SHELLS.has(rule.destination) || /^\/[\w./-]+\/index\.html$/.test(rule.destination))
-          .map((rule) => rule.source)
-      )
+      const covering = (config.rewrites ?? [])
+        .filter((rule) => SHELLS.has(rule.destination) || SNAPSHOT_DESTINATION.test(rule.destination))
+        .map((rule) => rule.source)
 
       // Derived by the SAME function the prerender crawl uses, so the gate and
       // the crawl cannot disagree about what a route is. It drops the in-app
@@ -175,7 +173,7 @@ function spaRoutesAreRewritten() {
       // parameterised — React Router and Vercel spell params alike.
       const { static: staticRoutes, dynamic } = routesFromApp(app, postExpansions(POSTS))
       const routes = [...staticRoutes, ...dynamic]
-      const missing = routes.filter((route) => !covering.has(route))
+      const missing = routes.filter((route) => !covering.some((source) => sourceCovers(source, route)))
       if (missing.length) {
         this.error(
           `vercel.json has no rewrite to /index.html for ${missing.join(', ')}. ` +

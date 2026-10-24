@@ -9,7 +9,6 @@ import TestimonialsSection from "../components/home/TestimonialsSection";
 import JewelrySection from "../components/home/JewelrySection";
 import PastSalesSection from "../components/home/PastSalesSection";
 import { usePageMeta } from "@/lib/usePageMeta";
-import { useJsonLd, localBusinessGraph, webSiteGraph } from "@/lib/structuredData";
 import { usePreloadData } from "@/lib/usePreloadData";
 import { salesUrl } from "@/api/salesClient";
 
@@ -17,8 +16,6 @@ export default function Home() {
   // No arguments is the site default — but the call itself is required, or a
   // route walked here from keeps its own title and share text.
   usePageMeta();
-  useJsonLd("business", localBusinessGraph());
-  useJsonLd("website", webSiteGraph());
   usePreloadData(salesUrl());
 
   return (
