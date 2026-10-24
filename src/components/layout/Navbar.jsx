@@ -6,10 +6,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import Wordmark from "@/components/brand/Wordmark";
 
 /**
- * Six items now, and the count is the constraint rather than the content: the
+ * Seven items now, and the count is the constraint rather than the content: the
  * bar must stay on ONE line at 1024 (docs/UI-PRINCIPLES.md §8). "Upcoming Sales"
- * is the longest label here and it is what pushed the row closest to wrapping,
- * so measure at lg before adding a seventh rather than assuming it fits.
+ * is the longest label here and it is what pushed the row closest to wrapping.
+ * Blog (2026-10-24) was measured in Chrome before it went in: one row at 1024 and
+ * 1280, and at 768 and 900 the same wrap the six had. Measure again before an eighth.
  */
 const navLinks = [
   { label: "Home", path: "/" },
@@ -17,6 +18,7 @@ const navLinks = [
   { label: "Upcoming Sales", path: "/upcoming-sales" },
   { label: "Shop", path: "/shop" },
   { label: "Our Story", path: "/about" },
+  { label: "Blog", path: "/blog" },
   { label: "Contact", path: "/contact" },
 ];
 
