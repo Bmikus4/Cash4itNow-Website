@@ -10,6 +10,7 @@ import {
   wrap,
 } from "framer-motion";
 import HeroSaleCard from "@/components/home/HeroSaleCard";
+import { srcSetOf, coverSizes } from "@/lib/responsiveImage";
 
 /**
  * The hero's image asset: diagonal ribbons of item cards.
@@ -832,6 +833,8 @@ function Ribbon({ items, speed, direction, index, paused, register, reduceMotion
               ) : (
                 <img
                   src={item.imageUrl}
+                  srcSet={srcSetOf(item.imageUrl)}
+                  sizes={coverSizes(item.imageUrl, m.cardW, m.cardH)}
                   alt=""
                   loading="lazy"
                   decoding="async"

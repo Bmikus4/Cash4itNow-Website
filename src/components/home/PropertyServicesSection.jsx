@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { srcSetOf } from "@/lib/responsiveImage";
 
 const services = [
   {
@@ -9,7 +10,7 @@ const services = [
   },
   {
     title: "Refreshes",
-    image: "https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=600&q=80",
+    image: "/img/unsplash-1552321554.webp",
     description: "Elevate your listings with cosmetic enhancements like floor refinishing and cabinet refacing.",
   },
   {
@@ -62,6 +63,11 @@ export default function PropertyServicesSection() {
                 ) : (
                   <img
                     src={s.image}
+                    srcSet={srcSetOf(s.image)}
+                    // The card's width: one, two, then four columns with gap-6 inside max-w-7xl and
+                    // px-6/md:px-10. Every single photograph here is narrower in shape than the 4:3
+                    // box, so it is drawn as wide as the card; a smaller figure would blur it.
+                    sizes="(min-width: 1280px) 282px, (min-width: 1024px) calc(25vw - 38px), (min-width: 768px) calc(50vw - 52px), (min-width: 640px) calc(50vw - 36px), calc(100vw - 48px)"
                     alt={s.title}
                     loading="lazy"
                     decoding="async"

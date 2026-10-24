@@ -1,6 +1,7 @@
 import React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { CATEGORIES } from "@/content/categories";
+import { srcSetOf } from "@/lib/responsiveImage";
 
 /**
  * What We Buy, as real text.
@@ -64,6 +65,11 @@ export default function CategoryList() {
             <div className="relative aspect-[16/9] overflow-hidden bg-foreground/5">
               <img
                 src={category.cardImage}
+                srcSet={srcSetOf(category.cardImage)}
+                // The card's width: one column, then two, inside CategoriesPreview's max-w-7xl and
+                // px-6/md:px-10. A 16:9 box is wider than any of these photographs, so each is drawn
+                // exactly as wide as its card; a smaller figure here would blur them.
+                sizes="(min-width: 1280px) 600px, (min-width: 768px) calc(50vw - 40px), (min-width: 640px) calc(50vw - 24px), calc(100vw - 48px)"
                 alt=""
                 loading="lazy"
                 decoding="async"

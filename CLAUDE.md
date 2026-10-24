@@ -13,3 +13,6 @@ and /shop on phone and desktop with Lighthouse (`scripts/measure.mjs`), appends 
   Measure in between with `node scripts/measure.mjs [--runs 1] [--base https://www.cash4itnow.com]`.
 - Local numbers are not live numbers (no HTTP/2 locally). Compare ticket with ticket.
 - Build gates and deploy traps: `docs/DEPLOY.md`. Design invariants: `docs/UI-PRINCIPLES.md`.
+- A photograph added to or replaced in `public/img` needs `python scripts/img-variants.py` and its
+  output committed, or the build fails. `src/main.jsx` holds the app back until the prerendered paint
+  is recorded; read it before touching how the app boots.

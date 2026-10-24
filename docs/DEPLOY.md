@@ -31,13 +31,18 @@ source of truth for how the site is built, the same rule `src/lib/origins.js`
 enforces for hosts.
 
 It WAS `vite build` rather than `npm run build` until 2026-09-03, and the
-difference is the prerender plus the five checks chained behind it:
+difference is the prerender plus the checks chained behind it:
 
 ```
 vite build && node scripts/prerender.mjs
            && check-sitemap && check-category-text
            && check-catalog-states && check-degraded-states && check-event-schema
+           && check-image-variants
 ```
+
+`check-image-variants` (2026-10-23) fails a photograph in `public/img` that has no smaller copies:
+run `python scripts/img-variants.py` and commit what it writes. Vercel never runs the script; its
+outputs are committed.
 
 ### Why the full build could not run in CI, and what changed
 

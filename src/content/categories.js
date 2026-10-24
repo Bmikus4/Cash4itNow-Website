@@ -41,8 +41,8 @@ export const CATEGORIES = [
   {
     title: "Records, CDs, Guitars & Music Memorabilia",
     items: ["Vinyl Records", "CDs", "Electric Guitars", "Acoustic Guitars", "Signed Memorabilia", "Old Cassettes", "Jukeboxes"],
-    image: "https://images.unsplash.com/photo-1603048588665-791ca8aea617?w=800&q=80",
-    cardImage: "https://images.unsplash.com/photo-1603048588665-791ca8aea617?w=800&q=80",
+    image: "/img/unsplash-1603048588665.webp",
+    cardImage: "/img/unsplash-1603048588665.webp",
   },
   {
     title: "Tonka, Matchbox, GI Joe, Atari, Nintendo & Pedal Cars",
