@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Phone } from "lucide-react";
+import { reveal } from "@/lib/reveal";
 
 const JEWELRY_IMG = "/img/f3522ea84_generated_image.webp";
 
@@ -43,9 +44,7 @@ export default function JewelrySection() {
           {/* Content */}
           <div className="w-full md:w-3/5 p-8 md:p-14 flex flex-col justify-center border-t md:border-t-0 md:border-l border-foreground">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              {...reveal()}
             >
               <span className="inline-block bg-accent text-white font-heading font-black text-xs uppercase tracking-widest px-3 py-1 mb-5">
                 Estate Jewelry Liquidation

@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
+import { reveal } from "@/lib/reveal";
 
 const testimonials = [
   {
@@ -34,9 +35,7 @@ export default function TestimonialsSection() {
     <section className="py-16 md:py-24 bg-foreground">
       <div className="max-w-7xl mx-auto px-6 md:px-10">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          {...reveal()}
           className="mb-12 md:mb-16 text-center"
         >
           <p className="font-heading text-accent text-sm uppercase tracking-[0.3em] mb-3">What Clients Say</p>
@@ -50,10 +49,7 @@ export default function TestimonialsSection() {
           {testimonials.map((t, i) => (
             <motion.div
               key={t.name}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
+              {...reveal({ delay: i * 0.1 })}
               className="p-8 md:p-10 border-b border-r border-background/20 hover:bg-background/5 transition-colors"
             >
               <div className="flex gap-1 mb-5">

@@ -2,6 +2,7 @@ import React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { CATEGORIES } from "@/content/categories";
 import { srcSetOf } from "@/lib/responsiveImage";
+import { reveal } from "@/lib/reveal";
 
 /**
  * What We Buy, as real text.
@@ -41,10 +42,7 @@ export default function CategoryList() {
       {CATEGORIES.map((category, i) => (
         <motion.li
           key={category.title}
-          initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-          whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-40px" }}
-          transition={{ duration: 0.35, delay: reduceMotion ? 0 : Math.min(i, 5) * 0.04 }}
+          {...(reduceMotion ? {} : reveal({ y: 12, duration: 0.35, delay: Math.min(i, 5) * 0.04, margin: "-40px" }))}
           /* Every cell carries a bottom rule and every left-column cell a right
              rule, so the block is gridded throughout and the outer border above
              closes it. The doubled edge that would otherwise fall on the last row

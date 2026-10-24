@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { srcSetOf } from "@/lib/responsiveImage";
+import { reveal } from "@/lib/reveal";
 
 const services = [
   {
@@ -33,9 +34,7 @@ export default function PropertyServicesSection() {
     <section className="py-16 md:py-24 bg-background">
       <div className="max-w-7xl mx-auto px-6 md:px-10">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          {...reveal()}
           className="mb-12 md:mb-16 text-center"
         >
           <h2 className="font-heading font-black text-4xl md:text-6xl uppercase tracking-tight text-foreground mb-2">
@@ -48,10 +47,7 @@ export default function PropertyServicesSection() {
           {services.map((s, i) => (
             <motion.div
               key={s.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
+              {...reveal({ delay: i * 0.1 })}
               className="flex flex-col border border-border"
             >
               <div className="aspect-[4/3] overflow-hidden">

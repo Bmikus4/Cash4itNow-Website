@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import CategoryList from "@/components/home/CategoryList";
+import { reveal } from "@/lib/reveal";
 
 export default function CategoriesPreview() {
   return (
@@ -9,9 +10,7 @@ export default function CategoriesPreview() {
       <div className="max-w-7xl mx-auto px-6 md:px-10">
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          {...reveal()}
           className="mb-12 md:mb-16 text-center">
           <h2 className="font-heading font-black text-4xl md:text-6xl uppercase tracking-tight text-foreground mb-2">
             What We Buy
@@ -36,9 +35,7 @@ export default function CategoriesPreview() {
             is captioned as an artefact rather than used as the answer. */}
 
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          {...reveal({ y: 10 })}
           className="text-center mt-10">
           <Link
             to="/categories"

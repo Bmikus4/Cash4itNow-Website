@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useLeadForm, CONTACT_PHONE, CONTACT_PHONE_HREF } from "@/api/leadForm";
+import { reveal } from "@/lib/reveal";
 
 const ITEM_TYPES = [
   "Records & Music", "Toys & Collectibles", "Military & Weapons",
@@ -73,9 +74,7 @@ export default function CtaSection() {
     <section className="py-16 md:py-24 bg-accent">
       <div className="max-w-5xl mx-auto px-6 md:px-10">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          {...reveal()}
           className="text-center mb-10"
         >
           <h2 className="font-heading font-black text-white text-4xl md:text-6xl lg:text-7xl uppercase tracking-tight leading-[0.9] mb-4">
@@ -87,10 +86,7 @@ export default function CtaSection() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.15 }}
+          {...reveal({ delay: 0.15 })}
         >
           <form onSubmit={handleSubmit} className="bg-white p-8 md:p-10 space-y-5">
             {honeypotField}
@@ -200,9 +196,7 @@ export default function CtaSection() {
             White on the accent band, because the outlined-accent treatment it
             wears inside How It Works would be invisible here. */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          {...reveal()}
           className="text-center mt-10"
         >
           <Link

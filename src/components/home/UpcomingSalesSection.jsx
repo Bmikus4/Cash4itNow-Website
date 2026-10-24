@@ -8,6 +8,7 @@ import { sectionMode, isSnapshot } from "@/api/salesWire";
 import SaleCard from "@/components/sales/SaleCard";
 import SalesUnavailableNotice from "@/components/sales/SalesUnavailableNotice";
 import { useJsonLd, saleEventsGraph } from "@/lib/structuredData";
+import { reveal } from "@/lib/reveal";
 
 export default function UpcomingSalesSection() {
   const { data, isLoading } = useQuery(salesQuery());
@@ -49,9 +50,7 @@ export default function UpcomingSalesSection() {
     <section className="py-16 md:py-24 bg-foreground">
       <div className="max-w-7xl mx-auto px-6 md:px-10">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          {...reveal()}
           className="mb-12 text-center"
         >
           <p className="font-heading text-accent text-sm uppercase tracking-[0.3em] mb-3">Don't Miss Out</p>

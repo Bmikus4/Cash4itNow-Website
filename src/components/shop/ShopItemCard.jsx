@@ -5,6 +5,7 @@ import { useCart } from "@/lib/CartContext";
 import { useFavorites } from "@/lib/FavoritesContext";
 import MakeOfferModal from "@/components/shop/MakeOfferModal";
 import { COMMERCE_ENABLED } from "@/lib/flags";
+import { reveal } from "@/lib/reveal";
 
 const conditionColors = {
   Excellent: "bg-green-100 text-green-800",
@@ -24,10 +25,7 @@ export default function ShopItemCard({ item, index, onBuyNow }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.05 }}
+      {...reveal({ delay: index * 0.05 })}
       className="border-2 border-foreground flex flex-col group hover:shadow-lg transition-shadow"
     >
       {/* Image */}

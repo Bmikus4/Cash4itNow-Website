@@ -7,6 +7,7 @@ import { saleDateRange, saleLocation, saleStartTime } from "@/api/salesClient";
 import { readCatalog, CATALOG_ITEMS, CATALOG_PENDING } from "@/api/catalogChannel";
 import CountdownTimer from "@/components/sales/CountdownTimer";
 import SaleCouponSignup from "@/components/sales/SaleCouponSignup";
+import { reveal } from "@/lib/reveal";
 
 /**
  * One sale, rendered the same way wherever a sale is listed.
@@ -67,10 +68,7 @@ export default function SaleCard({ sale, index = 0, tone = "dark", showSignup = 
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: Math.min(index, 5) * 0.08 }}
+      {...reveal({ delay: Math.min(index, 5) * 0.08 })}
       className={`${t.card} flex flex-col group`}
     >
       {sale.imageUrl && (

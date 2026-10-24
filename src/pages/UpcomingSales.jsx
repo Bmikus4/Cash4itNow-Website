@@ -12,6 +12,7 @@ import EmptyPanel from "@/components/ui/EmptyPanel";
 import SalesUnavailableNotice from "@/components/sales/SalesUnavailableNotice";
 import { usePageMeta } from "@/lib/usePageMeta";
 import { useJsonLd, breadcrumbGraph, saleEventsGraph } from "@/lib/structuredData";
+import { reveal } from "@/lib/reveal";
 
 /**
  * Every estate sale we have catalogued, as its own page.
@@ -186,9 +187,7 @@ export default function UpcomingSales() {
         <section className="bg-foreground py-14 md:py-20 px-6 md:px-10">
           <div className="max-w-7xl mx-auto">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              {...reveal()}
               className="mb-12 text-center"
             >
               <h2 className="font-heading font-black text-background text-4xl md:text-6xl uppercase tracking-tight mb-2">

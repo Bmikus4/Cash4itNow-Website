@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Shield, Heart, Handshake, Phone, DollarSign } from "lucide-react";
 import { usePageMeta } from "@/lib/usePageMeta";
 import { useJsonLd, breadcrumbGraph } from "@/lib/structuredData";
+import { reveal } from "@/lib/reveal";
 
 const VETERAN_IMG = "/img/69fb4adcd_generated_c67afaf6.webp";
 
@@ -58,7 +59,7 @@ export default function About() {
       {/* Values */}
       <section className="py-14 md:py-20 px-6 md:px-10">
         <div className="max-w-7xl mx-auto">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-10">
+          <motion.div {...reveal()} className="mb-10">
             <h2 className="font-heading font-black text-foreground text-4xl md:text-5xl uppercase tracking-tight">
               Built on Trust
             </h2>
@@ -68,10 +69,7 @@ export default function About() {
             {values.map((value, i) => (
               <motion.div
                 key={value.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
+                {...reveal({ delay: i * 0.1 })}
                 className="border-b border-r border-foreground p-8 md:p-10 hover:bg-foreground/5 transition-colors"
               >
                 <div className="w-12 h-12 bg-accent flex items-center justify-center mb-5">

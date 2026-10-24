@@ -169,6 +169,12 @@ has not read them:
   when it moves a quarter of a degree, and its speed-up is the Web Animation's `playbackRate`:
   bound through framer, the lean re-layered the whole page on every scroll frame (Layerize 662ms
   against 52ms over the same scroll).
+- **A section rises into view with `{...reveal()}` (`src/lib/reveal.js`), never framer's `y`.**
+  framer runs `y` from JavaScript; `reveal()` gives framer a `transform` string, which it hands to
+  the compositor, with framer's own spring and ease restated so the motion is the same. A first
+  scroll down Home went from 97% of a 4x-slowed phone's main thread to 70%. It ends at
+  `transform: none` on purpose: a leftover translateY(0px) pins any `position: fixed` child inside
+  the element.
 
 Also load-bearing and easy to break: transforms that must be composed by framer rather than
 written as a Tailwind class or a raw inline `transform`. Tailwind only emits CSS for *literal*

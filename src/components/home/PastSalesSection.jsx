@@ -5,6 +5,7 @@ import { CalendarCheck, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { salesQuery, saleDateRange, saleGridClass, saleLocation } from "@/api/salesClient";
 import { sectionMode, isSnapshot } from "@/api/salesWire";
+import { reveal } from "@/lib/reveal";
 
 export default function PastSalesSection() {
   const { data, isLoading } = useQuery(salesQuery());
@@ -28,9 +29,7 @@ export default function PastSalesSection() {
     <section className="py-16 md:py-24 bg-background">
       <div className="max-w-7xl mx-auto px-6 md:px-10">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          {...reveal()}
           className="mb-12"
         >
           <p className="font-heading text-accent text-sm uppercase tracking-[0.3em] mb-3">Proven Results</p>
@@ -47,10 +46,7 @@ export default function PastSalesSection() {
           {sales.map((sale, i) => (
             <motion.div
               key={sale.slug}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.07 }}
+              {...reveal({ delay: i * 0.07 })}
               className="border-2 border-foreground/10 bg-card flex flex-col group"
             >
               {sale.imageUrl && (
