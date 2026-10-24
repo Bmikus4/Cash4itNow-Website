@@ -21,7 +21,7 @@
     { "source": "/sale/:slug", "destination": "/app.html" },
     { "source": "/(.*)", "destination": "/404.html" }
   ],
-  "ignoreCommand": "sh -c 'P=${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}; [ \"$P\" = \"$VERCEL_GIT_COMMIT_SHA\" ] && exit 1; git diff --quiet \"$P\" HEAD -- src scripts public index.html middleware.js vercel.json vite.config.js tailwind.config.js postcss.config.js jsconfig.json package.json package-lock.json .puppeteerrc.cjs'",
+  "ignoreCommand": "sh scripts/ignore-build.sh",
   "headers": [
     {
       "source": "/(.*)",
